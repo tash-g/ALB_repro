@@ -1,2 +1,3 @@
 # ALB_repro
-Companion to the failure rates manuscript
+
+# This is the companion repository to the failure rates manuscript.
