@@ -791,7 +791,7 @@ posteriors_plot.incub_waal.horizontal <-
 
 
 #### COMBINED posterior plots -----------------------------------------------------------
-png(file = "Figures/rs_failure/posterior_estimates_incub_horizontal.png", 
+png(file = "Figures/posterior_estimates_incub_horizontal.png", 
     width = 15, height = 9, units = "in", res = 600)
 ggarrange(posteriors_plot.incub_bba.horizontal + theme(plot.margin = unit(c(1,0.05,1,3), "cm")), 
           posteriors_plot.incub_waal.horizontal + theme(plot.margin = unit(c(1,1,1,0.75), "cm")), 
@@ -800,7 +800,7 @@ ggarrange(posteriors_plot.incub_bba.horizontal + theme(plot.margin = unit(c(1,0.
 dev.off()
 
 # Laptop
-png(file = "Figures/rs_failure/posterior_estimates_incub_horizontal2.png", 
+png(file = "Figures/posterior_estimates_incub_horizontal2.png", 
     width = 15, height = 9, units = "in", res = 100)
 ggarrange(posteriors_plot.incub_bba.horizontal, posteriors_plot.incub_waal.horizontal,
           ncol = 2, widths = c(1, 0.85))
@@ -952,22 +952,22 @@ bbal_incub.fixef_extra
 
 
 # Look at mean effects
-incub_brms.bba %>%
-  spread_draws(b_Intercept, b_colonykerguelen, b_sum_debt.hrs,
-               b_median_trip.days, b_diff_trip.days, b_pair_var.days,
-               b_diff_var.days, `b_colonykerguelen:sum_debt.hrs`,
-               `b_colonykerguelen:median_trip.days`, `b_colonykerguelen:diff_trip.days`,
-               `b_colonykerguelen:pair_var.days`, `b_colonykerguelen:diff_var.days`) %>%
-  gather(variable, value, b_Intercept:`b_colonykerguelen:diff_var.days`) %>%
-  group_by(variable) %>%
-  summarize(
-    mean = mean(value),
-    sd = sd(value),
-    lwr = quantile(value, .05),
-    upr = quantile(value, .95) )
+# incub_brms.bba %>%
+#   spread_draws(b_Intercept, b_colonykerguelen, b_sum_debt.hrs,
+#                b_median_trip.days, b_diff_trip.days, b_pair_var.days,
+#                b_diff_var.days, `b_colonykerguelen:sum_debt.hrs`,
+#                `b_colonykerguelen:median_trip.days`, `b_colonykerguelen:diff_trip.days`,
+#                `b_colonykerguelen:pair_var.days`, `b_colonykerguelen:diff_var.days`) %>%
+#   gather(variable, value, b_Intercept:`b_colonykerguelen:diff_var.days`) %>%
+#   group_by(variable) %>%
+#   summarize(
+#     mean = mean(value),
+#     sd = sd(value),
+#     lwr = quantile(value, .05),
+#     upr = quantile(value, .95) )
 
 # Get posterior estimates
-brms.incub_posterior <- posterior_samples(brms.incub, "^b")
+brms.incub_posterior <- posterior_samples(incub_brms.bba, "^b")
 
 brms.incub_posterior.df <- stack(brms.incub_posterior) %>%
   rename(variable = ind, value = values) %>%
@@ -1015,25 +1015,25 @@ cro_diff_var <- process_interaction_estimates("b_diff_var.days", waal_incub.fixe
 cro_fixef <- rbind(cro_debt, cro_median_trip, cro_diff_trip, cro_diff_var)
 colnames(cro_fixef) <- colnames(waal_incub.fixef_extra)
 
-waal_incub.fixef_extra <- rbind(waal_incub.fixef, cro_fixef)
+waal_incub.fixef_extra <- rbind(waal_incub.fixef_extra, cro_fixef)
 waal_incub.fixef_extra
 
 
 
 # Look at mean effects
-incub_brms.waal %>%
-  spread_draws(b_Intercept, b_max_debt.hrs, b_colonycrozet, b_sum_debt.hrs,
-               b_median_trip.days, b_diff_trip.days, b_pair_var.days,
-               b_diff_var.days, `b_max_debt.hrs:colonycrozet`, `b_colonycrozet:sum_debt.hrs`,
-               `b_colonycrozet:median_trip.days`, `b_colonycrozet:diff_trip.days`,
-               `b_colonycrozet:pair_var.days`, `b_colonycrozet:diff_var.days`) %>%
-  gather(variable, value, b_Intercept:`b_colonycrozet:diff_var.days`) %>%
-  group_by(variable) %>%
-  summarize(
-    mean = mean(value),
-    sd = sd(value),
-    lwr = quantile(value, .05),
-    upr = quantile(value, .95) )
+# incub_brms.waal %>%
+#   spread_draws(b_Intercept, b_max_debt.hrs, b_colonycrozet, b_sum_debt.hrs,
+#                b_median_trip.days, b_diff_trip.days, b_pair_var.days,
+#                b_diff_var.days, `b_max_debt.hrs:colonycrozet`, `b_colonycrozet:sum_debt.hrs`,
+#                `b_colonycrozet:median_trip.days`, `b_colonycrozet:diff_trip.days`,
+#                `b_colonycrozet:pair_var.days`, `b_colonycrozet:diff_var.days`) %>%
+#   gather(variable, value, b_Intercept:`b_colonycrozet:diff_var.days`) %>%
+#   group_by(variable) %>%
+#   summarize(
+#     mean = mean(value),
+#     sd = sd(value),
+#     lwr = quantile(value, .05),
+#     upr = quantile(value, .95) )
 
 
 # ______________________________ ####
@@ -1395,18 +1395,18 @@ bbal_brooding.fixef_extra
 
 
 # Look at mean effects
-knitr::kable(brms.brooding %>%
-               spread_draws(b_Intercept, b_sd_trip.F, b_sd_trip.M, b_median_trip.M, b_median_trip.F,
-                            b_mean_debt.F, b_mean_debt.M) %>%
-               gather(variable, value, b_Intercept:b_mean_debt.M) %>%
-               group_by(variable) %>%
-               summarize(mean = mean(value),
-                         sd = sd(value),
-                         lwr = quantile(value, .05),
-                         upr = quantile(value, .95)), "simple")
+# knitr::kable(brooding_brms.bba %>%
+#                spread_draws(b_Intercept, b_sd_trip.F, b_sd_trip.M, b_median_trip.M, b_median_trip.F,
+#                             b_mean_debt.F, b_mean_debt.M) %>%
+#                gather(variable, value, b_Intercept:b_mean_debt.M) %>%
+#                group_by(variable) %>%
+#                summarize(mean = mean(value),
+#                          sd = sd(value),
+#                          lwr = quantile(value, .05),
+#                          upr = quantile(value, .95)), "simple")
 
 # Get posterior estimates
-brms.brooding_posterior <- posterior_samples(brms.brooding, "^b")
+brms.brooding_posterior <- posterior_samples(brooding_brms.bba, "^b")
 
 brms.brooding_posterior.df <- stack(brms.brooding_posterior) %>%
   rename(variable = ind, value = values) %>%
@@ -1466,7 +1466,7 @@ posteriors_plot.incub_bba.horizontal2<- ggdraw() +
               theme(axis.title.y = element_text(margin = margin(r = 90)),
                     axis.title.x = element_blank(),
                     text = element_text(size = 16, family = "Calibri"))) +
-  draw_image(file.path("Figures/rs_failure/bba_standing_silhouette.png"),
+  draw_image(file.path("Figures/bba_standing_silhouette.png"),
              scale = 0.15, x = 0.39, y = 0.28) 
   
 
@@ -1474,11 +1474,11 @@ posteriors_plot.incub_waal.horizontal2 <- ggdraw() +
   draw_plot(posteriors_plot.incub_waal.horizontal +
               theme(axis.title.x = element_blank(),
                     text = element_text(size = 16, family = "Calibri"))) +
-  draw_image(file.path("Figures/rs_failure/waal_standing_silhouette.png"),
+  draw_image(file.path("Figures/waal_standing_silhouette.png"),
              scale = 0.2, x = 0.38, y = 0.32)
 
 
-png(file = "Figures/rs_failure/FIGURE1.png", width = 10, height = 10, units = "in", res = 100)
+png(file = "Figures/FIGURE1.png", width = 10, height = 10, units = "in", res = 100)
 ggarrange(posteriors_plot.incub_bba.horizontal2,
           posteriors_plot.incub_waal.horizontal2,
           posteriors_plot.brooding_bba.horizontal + 
@@ -1528,56 +1528,19 @@ dev.off()
 
 # * FIGURE 2 * BBAL INCUB CONDITIONAL PLOTS ==========================================
 
-png(file = "Figures/rs_failure/FIGURE2.png", width = 15, height = 10, units = "in", res = 300)
-ggarrange(
-  cond_plot.debt.days.bba_incub +
-    labs(tag = "A", y = "Incubation \nP|Breeding success") +
-    theme(axis.title.y = element_text(margin = margin(r = 35)), # pc: r = 35 ; laptop 10
-          plot.tag = element_text(size = 16, face = "bold"),
-          plot.tag.position = c(0.1, 1.01),
-          plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm")),
-  cond_plot.median_trip.days.bba_incub + 
-    labs(tag = "B") + 
-    theme(axis.text.y = element_blank(),
-          axis.title.y = element_blank(),
-          plot.tag = element_text(size = 16, face = "bold")),
-  cond_plot.diff_trip.days.bba_incub + 
-    labs(tag = "C") +
-    theme(axis.title.y = element_blank(),
-          axis.text.y = element_blank(),
-          plot.tag = element_text(size = 16, face = "bold")),
-  cond_plot.diff_var.days.bba_incub + 
-    labs(tag = "D", y = "Brooding \nP|Breeding success") +
-    theme(axis.title.y = element_text(margin = margin(r = 35)),
-          plot.tag = element_text(size = 16, face = "bold"),
-          plot.tag.position = c(0.1, 1.01),
-          plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm")),
-  ncol = 2,
-  nrow = 2,
-  widths = c(1, 0.85, 0.85)# pc: c(1, 0.825, 0.825) laptop =0.85
-)
-dev.off()
-
-
-# LAPTOP #
 cond_plot.debt.days.bba_incub2<- ggdraw() +
   draw_plot(cond_plot.debt.days.bba_incub + labs(tag = "A",y = "P|Breeding success") +
-              theme(axis.title.y = element_text(margin = margin(r = 10)),
+              theme(axis.title.y = element_text(margin = margin(r = 35)),
                     plot.tag = element_text(size = 16, face = "bold"),
-                    plot.tag.position = c(0.1, 1.01),
+                    plot.tag.position = c(0.05, 1.01),
                     plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm"),
                     text = element_text(size = 16, family = "Calibri"))) +
-  draw_image(file.path("Figures/rs_failure/bba_standing_silhouette.png"),
-             scale = 0.15, x = 0.39, y = 0.28) 
+  draw_image(file.path("Figures/bba_standing_silhouette.png"),
+             scale = 0.15, x = 0.39, y = -0.3) 
 
-png(file = "Figures/rs_failure/FIGURE2.png", width = 10, height = 10, units = "in", res = 300)
+png(file = "Figures/FIGURE2.png", width = 10, height = 10, units = "in", res = 300)
 ggarrange(
-  cond_plot.debt.days.bba_incub2,# +
-    # labs(tag = "A", y = "P|Breeding success") +
-    # theme(axis.title.y = element_text(margin = margin(r = 10)),
-    #       plot.tag = element_text(size = 16, face = "bold"),
-    #       plot.tag.position = c(0.1, 1.01),
-    #       plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm")),
+  cond_plot.debt.days.bba_incub2,
   cond_plot.median_trip.days.bba_incub + 
     labs(tag = "B") + 
     theme(axis.text.y = element_blank(),
@@ -1585,9 +1548,9 @@ ggarrange(
           plot.tag = element_text(size = 16, face = "bold")),
   cond_plot.diff_trip.days.bba_incub + 
     labs(tag = "C", y = "P|Breeding success") +
-    theme(axis.title.y = element_text(margin = margin(r = 10)),
+    theme(axis.title.y = element_text(margin = margin(r = 35)),
           plot.tag = element_text(size = 16, face = "bold"),
-          plot.tag.position = c(0.1, 1.01),
+          plot.tag.position = c(0.05, 1.01),
           plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm")),
   cond_plot.diff_var.days.bba_incub + 
     labs(tag = "D") +
@@ -1596,49 +1559,71 @@ ggarrange(
           plot.tag = element_text(size = 16, face = "bold")),
   ncol = 2,
   nrow = 2,
+  widths = c(1, 0.85) # pc: c(1, 0.825, 0.825) laptop =0.85
+)
+dev.off()
+
+
+# * FIGURE 3 * BBAL BROOD CONDITIONAL PLOTS ==========================================
+
+cond_plot.median_trip.days.bba_brooding2 <- ggdraw() +
+  draw_plot(cond_plot.median_trip.days.bba_brooding + labs(tag = "A",y = "P|Breeding success") +
+              theme(axis.title.y = element_text(margin = margin(r = 35)),
+                    plot.tag = element_text(size = 16, face = "bold"),
+                    plot.tag.position = c(0.05, 1.01),
+                    plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm"),
+                    text = element_text(size = 16, family = "Calibri"))) +
+  draw_image(file.path("Figures/bba_standing_silhouette.png"),
+             scale = 0.15, x = 0.39, y = -0.3) 
+
+png(file = "Figures/FIGURE3.png", width = 12, height = 6, units = "in", res = 300)
+ggarrange(
+  cond_plot.median_trip.days.bba_brooding2,
+  cond_plot.diff_var.days.bba_incub + 
+    labs(tag = "B") +
+    theme(axis.title.y = element_blank(),
+          axis.text.y = element_blank(),
+          plot.tag = element_text(size = 16, face = "bold")),
+  ncol = 2,
+  nrow = 1,
   widths = c(1, 0.85, 0.85) # pc: c(1, 0.825, 0.825) laptop =0.85
 )
 dev.off()
 
-# * FIGURE 3 * MEDIAN TRIP DURATIONG BROODING ==========================================
+# * FIGURE 4 * WAAL CONDITIONAL PLOTS ==========================================
 
-# Add albatross silhouettes
-median_trip.bba_brooding.plot <- ggdraw() +
-  draw_plot(cond_plot.median_trip.days.bba_brooding +
-              labs(tag = "A") +
-              theme(axis.title.y = element_text(margin = margin(r = 10)),
+# Add albatross silhouette
+cond_plot.median_trip.days.waal_incub2 <- ggdraw() +
+  draw_plot(cond_plot.median_trip.days.waal_incub +
+              labs(tag = "A", y = "Incubation \nP|Breeding success") +
+              theme(axis.title.y = element_text(margin = margin(r = 35)),
                     plot.tag = element_text(size = 16, face = "bold"),
-                    plot.tag.position = c(0, 1.01),
-                    plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm"))) +
-  draw_image(file.path("Figures/rs_failure/bba_standing_silhouette.png"),
-             scale = 0.15, x = 0.39, y = 0.28) 
+                    plot.tag.position = c(0.05, 1),
+                    plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm"),
+                    text = element_text(size = 16, family = "Calibri"))) +
+  draw_image(file.path("Figures/waal_standing_silhouette.png"),
+             scale = 0.2, x = 0.38, y = -0.22)
 
 
-median_trip.waal_brooding.plot <- ggdraw() +
-  draw_plot(cond_plot.median_trip.days.waal_brooding +
-              labs(tag = "B") +
-              theme(axis.title.y = element_blank(),
-                    axis.text.y = element_blank(),
-                    text = element_text(size = 16, family = "Calibri"),
-                    plot.tag = element_text(size = 16, face = "bold"),
-                    plot.tag.position = c(-0.025, 1.01),
-                    plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm"))) +
-  draw_image(file.path("Figures/rs_failure/waal_standing_silhouette.png"),
-             scale = 0.2, x = 0.38, y = 0.32)
-
-
-
-png(file = "Figures/rs_failure/FIGURE3.png", width = 12, height = 6, units = "in", res = 300)
+png(file = "Figures/FIGURE4.png", width = 10, height = 10, units = "in", res = 300)
 ggarrange(
-  median_trip.bba_brooding.plot,
-  median_trip.waal_brooding.plot,
-  nrow = 1, ncol = 2,
-  widths = c(1, 0.85)
+  cond_plot.median_trip.days.waal_incub2,
+  cond_plot.diff_var.days.waal_incub + 
+    labs(tag = "B") + 
+    theme(axis.text.y = element_blank(),
+          axis.title.y = element_blank(),
+          plot.tag = element_text(size = 16, face = "bold")),
+  cond_plot.debt.days.waal_brooding + 
+    labs(tag = "C", y = "Brooding \nP|Breeding success") +
+    theme(axis.title.y = element_text(margin = margin(r = 35)),
+          plot.tag = element_text(size = 16, face = "bold"),
+          plot.tag.position = c(0.05, 1),
+          plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm")),
+  ncol = 2,
+  nrow = 2,
+  widths = c(1, 0.85, 0.85)# pc: c(1, 0.825, 0.825) laptop =0.85
 )
-
 dev.off()
-
-
 
 # * TABLE 1 * BBAL COEFFICIENTS ================================================
 
