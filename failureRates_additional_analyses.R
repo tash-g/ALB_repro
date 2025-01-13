@@ -123,18 +123,14 @@ priors.bba <- c(set_prior("normal(-0.25, 0.5)", class = "b", coef = "trip_days.F
                 set_prior("normal(-0.25, 0.5)", class = "b", coef = "trip_days.M"),
                 set_prior("normal(-0.12, 0.5)", class = "b", coef = "sd_trip.M"),
                 set_prior("normal(-0.12, 0.5)", class = "b", coef = "sd_trip.F"),
-                set_prior("normal(-0.12, 0.5)", class = "b", coef = "debt.days")#,
-                #set_prior("normal(-0.5, 1)", class = "b", coef = "male_female_diff.var")
-                )
+                set_prior("normal(-0.12, 0.5)", class = "b", coef = "debt.days"))
 
 # WAAL
 priors.waal <- c(set_prior("normal(-0.25, 0.5)", class = "b", coef = "trip_days.F"),
                  set_prior("normal(-0.25, 0.5)", class = "b", coef = "trip_days.M"),
                  set_prior("normal(-0.12, 0.5)", class = "b", coef = "sd_trip.M"),
                  set_prior("normal(-0.12, 0.5)", class = "b", coef = "sd_trip.F"),
-                 set_prior("normal(-0.12, 0.5)", class = "b", coef = "debt.days")#,
-                 #set_prior("normal(-0.5, 1)", class = "b", coef = "male_female_diff.var")
-                )
+                 set_prior("normal(-0.12, 0.5)", class = "b", coef = "debt.days"))
 
 #### Specify models ----------------------------------------------------------------
 
@@ -792,15 +788,15 @@ waal_brooding.fixef
 
 # +++++++++++++++++++++++++++++ ####
 
-# * FIGURE SX * COMBINED POSTERIOR PLOTS ========================================
+# * FIGURE S1 * COMBINED POSTERIOR PLOTS ========================================
 
 # Add albatross silhouettes
 posteriors_plot.incub_bba.horizontal2 <- ggdraw() +
   draw_plot(posteriors_plot.incub_bba.horizontal + labs(y = "Incubation") +
-              theme(axis.title.y = element_text(margin = margin(r = 90)),
+              theme(axis.title.y = element_text(margin = margin(r = 10)),
                     axis.title.x = element_blank(),
                     text = element_text(size = 16, family = "Calibri"))) +
-  draw_image(file.path("Figures/rs_failure/bba_standing_silhouette.png"),
+  draw_image(file.path("Figures/bba_standing_silhouette.png"),
              scale = 0.15, x = 0.39, y = 0.28) 
 
 
@@ -808,22 +804,22 @@ posteriors_plot.incub_waal.horizontal2 <- ggdraw() +
   draw_plot(posteriors_plot.incub_waal.horizontal +
               theme(axis.title.x = element_blank(),
                     text = element_text(size = 16, family = "Calibri"))) +
-  draw_image(file.path("Figures/rs_failure/waal_standing_silhouette.png"),
+  draw_image(file.path("Figures/waal_standing_silhouette.png"),
              scale = 0.2, x = 0.38, y = 0.32)
 
 
-png(file = "Figures/rs_failure/FIGURESX.png", width = 10, height = 10, units = "in", res = 100)
+png(file = "Figures/FIGURES1.png", width = 10, height = 10, units = "in", res = 100)
 ggarrange(posteriors_plot.incub_bba.horizontal2,
           posteriors_plot.incub_waal.horizontal2,
           posteriors_plot.brooding_bba.horizontal + 
             labs(y = "Brooding") + 
-            theme(axis.title.y = element_text(margin = margin(r = 90)),
+            theme(axis.title.y = element_text(margin = margin(r = 10)),
                   plot.title = element_blank()),
           posteriors_plot.brooding_waal.horizontal + 
             theme(plot.title = element_blank()),
           ncol = 2,
           nrow = 2,
-          widths = c(1, 0.8))
+          widths = c(1, 0.75))
 dev.off()
 
 # +++++++++++++++++++++++++++++ ####

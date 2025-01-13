@@ -951,28 +951,13 @@ bbal_incub.fixef_extra <- rbind(bbal_incub.fixef_extra, ker_fixef)
 bbal_incub.fixef_extra
 
 
-# Look at mean effects
-# incub_brms.bba %>%
-#   spread_draws(b_Intercept, b_colonykerguelen, b_sum_debt.hrs,
-#                b_median_trip.days, b_diff_trip.days, b_pair_var.days,
-#                b_diff_var.days, `b_colonykerguelen:sum_debt.hrs`,
-#                `b_colonykerguelen:median_trip.days`, `b_colonykerguelen:diff_trip.days`,
-#                `b_colonykerguelen:pair_var.days`, `b_colonykerguelen:diff_var.days`) %>%
-#   gather(variable, value, b_Intercept:`b_colonykerguelen:diff_var.days`) %>%
-#   group_by(variable) %>%
-#   summarize(
-#     mean = mean(value),
-#     sd = sd(value),
-#     lwr = quantile(value, .05),
-#     upr = quantile(value, .95) )
+#### Readable estimates for manuscript -----
 
-# Get posterior estimates
-brms.incub_posterior <- posterior_samples(incub_brms.bba, "^b")
+log_to_percent(bbal_incub.fixef$Estimate[2]); log_to_percent(bbal_incub.fixef$`l-95% CI`[2]); log_to_percent(bbal_incub.fixef$`u-95% CI`[2])
+log_to_percent(bbal_incub.fixef$Estimate[4]); log_to_percent(bbal_incub.fixef$`l-95% CI`[4]); log_to_percent(bbal_incub.fixef$`u-95% CI`[4])
 
-brms.incub_posterior.df <- stack(brms.incub_posterior) %>%
-  rename(variable = ind, value = values) %>%
-  relocate(variable, .before = value) %>%
-  filter(variable != "b_Intercept")
+log_to_percent(bbal_incub.fixef$Estimate[5]); log_to_percent(bbal_incub.fixef$`l-95% CI`[5]); log_to_percent(bbal_incub.fixef$`u-95% CI`[5])
+log_to_percent(bbal_incub.fixef$Estimate[6]); log_to_percent(bbal_incub.fixef$`l-95% CI`[6]); log_to_percent(bbal_incub.fixef$`u-95% CI`[6])
 
 
 ### WAAL ---------------------------------------------------------------------
@@ -1019,22 +1004,17 @@ waal_incub.fixef_extra <- rbind(waal_incub.fixef_extra, cro_fixef)
 waal_incub.fixef_extra
 
 
+#### Readable estimates for manuscript -----
 
-# Look at mean effects
-# incub_brms.waal %>%
-#   spread_draws(b_Intercept, b_max_debt.hrs, b_colonycrozet, b_sum_debt.hrs,
-#                b_median_trip.days, b_diff_trip.days, b_pair_var.days,
-#                b_diff_var.days, `b_max_debt.hrs:colonycrozet`, `b_colonycrozet:sum_debt.hrs`,
-#                `b_colonycrozet:median_trip.days`, `b_colonycrozet:diff_trip.days`,
-#                `b_colonycrozet:pair_var.days`, `b_colonycrozet:diff_var.days`) %>%
-#   gather(variable, value, b_Intercept:`b_colonycrozet:diff_var.days`) %>%
-#   group_by(variable) %>%
-#   summarize(
-#     mean = mean(value),
-#     sd = sd(value),
-#     lwr = quantile(value, .05),
-#     upr = quantile(value, .95) )
+# Trip duration
+log_to_percent(waal_incub.fixef$Estimate[4]); log_to_percent(waal_incub.fixef$`l-95% CI`[4]); log_to_percent(waal_incub.fixef$`u-95% CI`[4])
 
+log_to_percent(waal_incub.fixef$Estimate[4]+waal_incub.fixef$Estimate[8]) ; log_to_percent(waal_incub.fixef$`l-95% CI`[4]+waal_incub.fixef$`l-95% CI`[8]) ; 
+log_to_percent(waal_incub.fixef$`u-95% CI`[4]+waal_incub.fixef$`u-95% CI`[8])
+
+# Within-pair trip variability difference (Crozet)
+log_to_percent(waal_incub.fixef$Estimate[6]+waal_incub.fixef$Estimate[10]) ; log_to_percent(waal_incub.fixef$`l-95% CI`[6]+waal_incub.fixef$`l-95% CI`[10]) ; 
+log_to_percent(waal_incub.fixef$`u-95% CI`[6]+waal_incub.fixef$`u-95% CI`[10])
 
 # ______________________________ ####
 # ~ * BROODING * ~ ###########################################################
@@ -1393,25 +1373,10 @@ colnames(ker_fixef) <- colnames(bbal_brooding.fixef_extra)
 bbal_brooding.fixef_extra <- rbind(bbal_brooding.fixef_extra, ker_fixef)
 bbal_brooding.fixef_extra
 
+#### Readable estimates for manuscript -----
 
-# Look at mean effects
-# knitr::kable(brooding_brms.bba %>%
-#                spread_draws(b_Intercept, b_sd_trip.F, b_sd_trip.M, b_median_trip.M, b_median_trip.F,
-#                             b_mean_debt.F, b_mean_debt.M) %>%
-#                gather(variable, value, b_Intercept:b_mean_debt.M) %>%
-#                group_by(variable) %>%
-#                summarize(mean = mean(value),
-#                          sd = sd(value),
-#                          lwr = quantile(value, .05),
-#                          upr = quantile(value, .95)), "simple")
+log_to_percent(bbal_brooding.fixef$Estimate[4]); log_to_percent(bbal_brooding.fixef$`l-95% CI`[4]); log_to_percent(bbal_brooding.fixef$`u-95% CI`[4])
 
-# Get posterior estimates
-brms.brooding_posterior <- posterior_samples(brooding_brms.bba, "^b")
-
-brms.brooding_posterior.df <- stack(brms.brooding_posterior) %>%
-  rename(variable = ind, value = values) %>%
-  relocate(variable, .before = value) %>%
-  filter(variable != "b_Intercept")
 
 
 ### WAAL ---------------------------------------------------------------------
@@ -1456,6 +1421,18 @@ colnames(cro_fixef) <- colnames(waal_brooding.fixef_extra)
 
 waal_brooding.fixef_extra <- rbind(waal_brooding.fixef_extra, cro_fixef)
 waal_brooding.fixef_extra
+
+
+#### Readable estimates for manuscript -----
+
+# Crozet effects
+## Pair debt - for illustration
+debt <- waal_brooding.fixef$Estimate[2]
+debt_cro <- waal_brooding.fixef$Estimate[7]
+
+log_to_percent(debt+debt_cro)
+log_to_percent(waal_brooding.fixef$`l-95% CI`[2] + waal_brooding.fixef$`l-95% CI`[7])
+log_to_percent(waal_brooding.fixef$`u-95% CI`[2] + waal_brooding.fixef$`u-95% CI`[7])
 
 # ++++++++++++++++++++++++ ####
 # * FIGURE 1 * COMBINED POSTERIOR PLOTS ========================================
@@ -1659,337 +1636,5 @@ waal_brooding.fixef_MS <- waal_brooding.fixef %>%
 
 table2.csv <- cbind(waal_incub.fixef_MS, waal_brooding.fixef_MS)
 readr::write_excel_csv(table2.csv, "Data_outputs/waal_coefficients.csv")
-
-# ++++++++++++++++++++++++ ####
-# ______________________________ ####
-# ~ * APPENDIX * ~ ###########################################################
-
-# INCUBATION =====================================================================
-
-load("Data_inputs/all_pair_behaviour_incub_withSex.RData")
-
-#### Specify priors ---------------------------------------------------------------
-
-# BBA 
-priors.bba <- c(set_prior("normal(-0.5, 0.5)", class = "b", coef = "male_female_diff.days"),
-                set_prior("normal(-0.25, 0.5)", class = "b", coef = "trip_days.F"),
-                set_prior("normal(-0.25, 0.5)", class = "b", coef = "trip_days.M"),       
-                set_prior("normal(-0.12, 0.5)", class = "b", coef = "sd_trip.F"),
-                set_prior("normal(-0.12, 0.5)", class = "b", coef = "sd_trip.M"),
-                set_prior("normal(-0.5, 0.5)", class = "b", coef = "male_female_diff.var") )
-
-# WAAL
-priors.waal <-  c(set_prior("normal(-0.5, 0.5)", class = "b", coef = "male_female_diff.days"),
-                  set_prior("normal(-0.25, 0.5)", class = "b", coef = "trip_days.F"),
-                  set_prior("normal(-0.25, 0.5)", class = "b", coef = "trip_days.M"),       
-                  set_prior("normal(-0.12, 0.5)", class = "b", coef = "sd_trip.F"),
-                  set_prior("normal(-0.12, 0.5)", class = "b", coef = "sd_trip.M"),
-                  set_prior("normal(-0.5, 0.5)", class = "b", coef = "male_female_diff.var") )
-
-#### Specify models ----------------------------------------------------------------
-
-# Datasets
-behaviour.bba.sex_incub <- pair_behaviour.incub_withSex %>% filter(species == "BBA")
-behaviour.waal.sex_incub <- pair_behaviour.incub_withSex %>% filter(species == "WAAL")
-
-# Model structure
-bf.incub.sex <- brms::bf(breeding_outcome.bin ~
-               male_female_diff.days * colony +
-                         trip_days.F * colony +
-                         trip_days.M * colony +
-                           sd_trip.F * colony + 
-                           sd_trip.M * colony +
-                male_female_diff.var * colony +
-                       (1|season), 
-                     family = "bernoulli")
-
-
-## Fit models
-incub_brms.bba.sex <- brm(bf.incub.sex,
-                      data = behaviour.bba.sex_incub, 
-                      cores = 3, chains = 3, 
-                      iter = 6000, warmup = 2000, thin = 10,
-                      control = list(adapt_delta = 0.9999, max_treedepth = 14),
-                      prior = priors.bba)
-
-summary(incub_brms.bba.sex)
-pp_check(incub_brms.bba.sex, ndraw = 50)
-save(incub_brms.bba.sex, file = "Data_outputs/bba_incub_sex_brms_model.RData")
-
-round(fixef(incub_brms.bba.sex), digits = 2)
-round(exp(fixef(incub_brms.bba.sex)), digits = 2)
-
-
-incub_brms.waal.sex <- brm(bf.incub,
-                       data = behaviour.waal.sex_incub, 
-                       cores = 3, chains = 3, 
-                       iter = 6000, warmup = 2000, thin = 10,
-                       control = list(adapt_delta = 0.9999, max_treedepth = 14),
-                       prior = priors.waal)
-
-summary(incub_brms.waal.sex)
-pp_check(incub_brms.waal.sex, ndraw = 50)
-save(incub_brms.waal.sex, file = "Data_outputs/waal_incub_sex_brms_model.RData")
-
-round(fixef(incub_brms.waal.sex), digits = 2)
-round(exp(fixef(incub_brms.waal.sex)), digits = 2)
-
-
-
-
-
-# OLD CODE ----------------------------------------------------------------
-
-
-
-## Split by sex
-posteriors_plot <- brms.incub_posterior.df %>%
-  mutate(sex = ifelse(grepl("F", variable), "F", "M")) %>%
-  mutate(variable = case_when(variable == "b_sd_trip.M" ~ "Trip variability",
-                              variable == "b_sd_trip.F" ~ "Trip variability",
-                              variable == "b_median_trip.M" ~ "Median trip duration",
-                              variable == "b_median_trip.F" ~ "Median trip duration",
-                              variable == "b_mean_debt.F" ~ "Fasting debt",
-                              variable == "b_mean_debt.M" ~ "Fasting debt"),
-         variable = fct_relevel(variable, c("Trip variability", 
-                                            "Median trip duration", 
-                                            "Fasting debt"))) %>%
-  ggplot(aes(x = value, y = variable, fill = after_stat(x < 0))) + 
-  stat_halfeye() +
-  facet_wrap(.~sex,
-             labeller = as_labeller(c("F" = "Female",
-                                      "M" = "Male"))) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  scale_fill_manual(values = c("#FFD2C8", "#E5F7FF")) +
-  labs(y = "", x = "Posterior estimate",
-       caption = "Data: pair.df in {analyse_behavioural_impacts.R}. Intercept omitted for readability.") +
-  theme_bw() +
-  theme(legend.position = "none",
-        strip.text.x.top = element_text(face = "bold"),
-        plot.caption = element_text(face = "italic",
-                                    margin = margin(t = 10, r = 0, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 5, r = 0, b = 0, l = 0)),
-        axis.text.y = element_text(size = 17))
-
-png(file = paste0("Figures/", species, "_posteriors.png"), width = 9, height = 6, units = "in", res = 300)
-posteriors_plot
-dev.off()
-
-
-# Coefficient range
-brms.incub %>%
-  tidy_draws() %>%
-  select(.chain:b_sd_trip.M) %>%
-  group_by(.chain, .iteration, .draw) %>%
-  gather(var, val, b_Intercept:ncol(.)) %>%
-  ungroup() %>%
-  group_by(var) %>%
-  summarize(mean = mean(val),
-            sd = sd(val),
-            lwr = quantile(val, .05),
-            upr = quantile(val, .95)) %>%
-  filter(var != "b_Intercept") %>%
-  mutate(var = case_when(var == "b_sd_trip.M" ~ "Male trip variability",
-                         var == "b_sd_trip.F" ~ "Female trip variability",
-                         var == "b_median_trip.M" ~ "Male median trip duration",
-                         var == "b_median_trip.F" ~ "Female median trip duration",
-                         var == "b_mean_debt.F" ~ "Female debt",
-                         var == "b_mean_debt.M" ~ "Male debt")) %>%
-  mutate(var = fct_relevel(var, c("Male trip variability", "Female trip variability", 
-                            "Male median trip duration", "Female median trip duration",
-                            "Female debt", "Male debt"))) %>%
-  ggplot(.,aes(var, mean, ymin=lwr, ymax=upr)) +
-  coord_flip() +
-  geom_pointrange() +
-  geom_hline(yintercept = 0, linetype="dashed") +
-  labs(x = "", y = "Mean coefficient (with 95% Intervals)",
-       caption = "Data: pair.df in {analyse_behavioural_impacts}. Intercept omitted for readability.") +
-  theme_bw() +
-  theme(axis.title.x = element_text(face = "italic", hjust = 1),
-        plot.caption = element_text(face = "italic"))
-
-
-## Split by sex
-coefficient_plot <- brms.incub %>%
-  tidy_draws() %>%
-  select(.chain:b_sd_trip.M) %>%
-  group_by(.chain, .iteration, .draw) %>%
-  gather(var, val, b_Intercept:ncol(.)) %>%
-  ungroup() %>%
-  group_by(var) %>%
-  summarize(mean = mean(val),
-            sd = sd(val),
-            lwr = quantile(val, .05),
-            upr = quantile(val, .95)) %>%
-  filter(var != "b_Intercept") %>%
-  mutate(sex = ifelse(grepl("F", var), "Female", "Male")) %>%
-  mutate(var = case_when(var == "b_sd_trip.M" ~ "Trip variability",
-                              var == "b_sd_trip.F" ~ "Trip variability",
-                              var == "b_median_trip.M" ~ "Median trip duration",
-                              var == "b_median_trip.F" ~ "Median trip duration",
-                              var == "b_mean_debt.F" ~ "Fasting debt",
-                              var == "b_mean_debt.M" ~ "Fasting debt"),
-         var = fct_relevel(var, c("Trip variability", 
-                                            "Median trip duration", 
-                                            "Fasting debt"))) %>%
-  ggplot(.,aes(var, mean, ymin=lwr, ymax=upr)) +
-  facet_wrap(.~sex) +
-  coord_flip() +
-  geom_pointrange() +
-  geom_hline(yintercept = 0, linetype="dashed") +
-  labs(x = "", y = "Mean coefficient (with 95% credible intervals)",
-       caption = "Data: pair.df in {analyse_behavioural_impacts}. Intercept omitted for readability.") +
-  theme_bw() +
-  theme(axis.title.x = element_text(margin = margin(t = 5, r = 0, b = 0, l = 0)),
-        plot.caption = element_text(face = "italic",
-                                    margin = margin(t = 10, r = 0, b = 0, l = 0)),
-        strip.text.x.top = element_text(face = "bold"),
-        axis.text.y = element_text(size = 17))
-
-png(file = paste0("Figures/", species, "_coefficients.png"), width = 9, height = 6, units = "in", res = 300)
-coefficient_plot
-dev.off()
-
-
-#### Non-interactive posteriors --------------
-
-brms.incub_posterior.waal <- posterior_samples(incub_brms.waal, "^b")
-
-brms.incub_posterior.waal.df <- stack(brms.incub_posterior.waal) %>%
-  rename(variable = ind, value = values) %>%
-  relocate(variable, .before = value) %>%
-  filter(variable != "b_Intercept")
-
-# Pair-level effects
-posteriors_incub.waal <- brms.incub_posterior.waal.df %>%
-  mutate(variable = case_when(
-    variable == "b_max_debt.hrs" ~ "Max pair debt",
-    variable == "b_sum_debt.hrs" ~ "Summed pair debt",
-    variable == "b_max_debt.hrs" ~ "Max trip duration",
-    variable == "b_median_trip.days" ~ "Median trip duration (pair)",
-    variable == "b_Imedian_trip.daysE2" ~ "Median trip duration (pair, quadratic)",
-    variable == "b_diff_trip.days" ~ "Median trip duration (difference)",
-    variable == "b_pair_var.days" ~ "Trip variability (pair)",
-    variable == "b_diff_var.days" ~ "Trip variability (difference)",
-    variable == "b_colonykerguelen" ~ "Kerguelen"),
-    variable = fct_relevel(variable, c("Trip variability (difference)",
-                                       "Trip variability (pair)",
-                                       "Median trip duration (difference)",
-                                       "Median trip duration (pair, quadratic)",
-                                       "Median trip duration (pair)",
-                                       "Max trip duration",
-                                       "Summed pair debt",
-                                       "Max pair debt"))) %>%
-  filter(variable != "Kerguelen" & variable != "Median trip duration (pair, quadratic)") %>%
-  ggplot(aes(x = value, y = variable, fill = after_stat(x < 0))) + 
-  stat_halfeye() +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  scale_fill_manual(values = c("#FFD2C8", "#E5F7FF")) +
-  xlim(-0.025, 0.04) +
-  labs(y = "", x = "Posterior estimate",
-       #caption = "Data: behaviour.waal in {analyse_behavioural_impacts.R}. Intercept omitted for readability.",
-       title = "Wandering albatrosses") +
-  theme_bw() +
-  theme(text = element_text(size = 16, family = "Calibri"),
-        legend.position = "none",
-        strip.text.x.top = element_text(face = "bold"),
-        plot.caption = element_text(face = "italic",
-                                    margin = margin(t = 10, r = 0, b = 0, l = 0)),
-        axis.title.x = element_text(margin = margin(t = 5, r = 0, b = 0, l = 0)),
-        axis.text.y = element_blank(),
-        title = element_blank())
-
-
-
-
-### Plot conditional effects  --------------------------------------------------
-
-#### Fasting debt --------------------------------------------------------------
-
-data_term.female_debt <- conditional_effects(brms.incub)$mean_debt.F
-
-female_debt.plot <- ggplot() +
-  geom_ribbon(aes(x = mean_debt.F, ymin = lower__, ymax = upper__), data = data_term.female_debt, fill = "grey80", alpha = 0.5) +
-  geom_line(aes(x = mean_debt.F, y = estimate__), data = data_term.female_debt, col = "orange", linewidth = 1) +
-  geom_point(aes(x = mean_debt.F, y = breeding_outcome.bin), data = pair_behaviour) +
-  labs(x = "Female fasting debt (hours)", y = "P|Breeding success") +
-  theme_bw()
-
-data_term.male_debt <- conditional_effects(brms.incub)$mean_debt.M
-
-male_debt.plot <- ggplot() +
-  geom_ribbon(aes(x = mean_debt.M, ymin = lower__, ymax = upper__), data = data_term.male_debt, fill = "grey80", alpha = 0.5) +
-  geom_line(aes(x = mean_debt.M, y = estimate__), data = data_term.male_debt, col = "orange", linewidth = 1) +
-  geom_point(aes(x = mean_debt.M, y = breeding_outcome.bin), data = pair_behaviour) +
-  labs(x = "Male fasting debt (hours)", y = "P|Breeding success") +
-  theme_bw() +
-  theme(axis.text.y = element_blank(),
-        axis.title.y = element_blank())
-
-
-png(file = paste0("Figures/RSFailure_ConditionalEffects/", species, "_fastingDebt.png"), width = 9, height = 6, units = "in", res = 300)
-gridExtra::grid.arrange(female_debt.plot, male_debt.plot,
-                        ncol = 2)
-dev.off()
-
-#### Median trip duration ----------------------------------------------------------
-
-data_term.female_medianTrip <- conditional_effects(brms.incub)$median_trip.F
-
-female_medianTrip.plot <- ggplot() +
-  geom_ribbon(aes(x = median_trip.F, ymin = lower__, ymax = upper__), data = data_term.female_medianTrip, fill = "grey80", alpha = 0.5) +
-  geom_line(aes(x = median_trip.F, y = estimate__), data = data_term.female_medianTrip, col = "orange", linewidth = 1) +
-  geom_point(aes(x = median_trip.F, y = breeding_outcome.bin), data = pair_behaviour) +
-  labs(x = "Female median trip duration (hours)", y = "P|Breeding success") +
-  theme_bw()
-
-data_term.male_medianTrip <- conditional_effects(brms.incub)$median_trip.M
-
-male_medianTrip.plot <- ggplot() +
-  geom_ribbon(aes(x = median_trip.M, ymin = lower__, ymax = upper__), data = data_term.male_medianTrip, fill = "grey80", alpha = 0.5) +
-  geom_line(aes(x = median_trip.M, y = estimate__), data = data_term.male_medianTrip, col = "orange", linewidth = 1) +
-  geom_point(aes(x = median_trip.M, y = breeding_outcome.bin), data = pair_behaviour) +
-  labs(x = "Male median trip duration (hours)", y = "P|Breeding success") +
-  theme_bw() +
-  theme(axis.text.y = element_blank(),
-        axis.title.y = element_blank())
-
-
-png(file = paste0("Figures/RSFailure_ConditionalEffects/", species, "_medianTrip.png"), width = 9, height = 6, units = "in", res = 300)
-gridExtra::grid.arrange(female_variability.plot, male_variability.plot,
-                        ncol = 2)
-dev.off()
-
-
-#### Trip variability ----------------------------------------------------------
-
-data_term.female_variability <- conditional_effects(brms.incub)$sd_trip.F
-
-female_variability.plot <- ggplot() +
-  geom_ribbon(aes(x = sd_trip.F, ymin = lower__, ymax = upper__), data = data_term.female_variability, fill = "grey80", alpha = 0.5) +
-  geom_line(aes(x = sd_trip.F, y = estimate__), data = data_term.female_variability, col = "orange", linewidth = 1) +
-  geom_point(aes(x = sd_trip.F, y = breeding_outcome.bin), data = pair_behaviour) +
-  labs(x = "Female trip variability (hours)", y = "P|Breeding success") +
-  theme_bw()
-
-data_term.male_variability <- conditional_effects(brms.incub)$sd_trip.M
-
-male_variability.plot <- ggplot() +
-  geom_ribbon(aes(x = sd_trip.M, ymin = lower__, ymax = upper__), data = data_term.male_variability, fill = "grey80", alpha = 0.5) +
-  geom_line(aes(x = sd_trip.M, y = estimate__), data = data_term.male_variability, col = "orange", linewidth = 1) +
-  geom_point(aes(x = sd_trip.M, y = breeding_outcome.bin), data = pair_behaviour) +
-  labs(x = "Male trip variability (hours)", y = "P|Breeding success") +
-  theme_bw() +
-  theme(axis.text.y = element_blank(),
-        axis.title.y = element_blank())
-
-
-png(file = paste0("Figures/RSFailure_ConditionalEffects/", species, "_tripVariability.png"), width = 9, height = 6, units = "in", res = 300)
-gridExtra::grid.arrange(female_variability.plot, male_variability.plot,
-                        ncol = 2)
-dev.off()
-
-
-
 
 
