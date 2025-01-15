@@ -47,8 +47,16 @@ brooding_col.low <- "#ffd69c"
 brooding_col.high <- "#fc980a"
 
 ker_col <-  "#156082" 
+ker_col.high <- "#155470"
+ker_col.low <- "#96d0eb"
+
 cro_col <- "#0F9ED5"
+cro_col.low <- "#7bc6e3"
+cro_col.high <- "#0080b3"
+
 bi_col <- "#E97132" 
+bi_col.low <- "#f59b6c"
+bi_col.high <- "#b54b14"
 
 fail_chick <- "#ED7A6E"
 fail_egg <- "#FFA07A"
@@ -793,7 +801,7 @@ waal_brooding.fixef
 # Add albatross silhouettes
 posteriors_plot.incub_bba.horizontal2 <- ggdraw() +
   draw_plot(posteriors_plot.incub_bba.horizontal + labs(y = "Incubation") +
-              theme(axis.title.y = element_text(margin = margin(r = 10)),
+              theme(axis.title.y = element_text(margin = margin(r = 90)),
                     axis.title.x = element_blank(),
                     text = element_text(size = 16, family = "Calibri"))) +
   draw_image(file.path("Figures/bba_standing_silhouette.png"),
@@ -813,13 +821,13 @@ ggarrange(posteriors_plot.incub_bba.horizontal2,
           posteriors_plot.incub_waal.horizontal2,
           posteriors_plot.brooding_bba.horizontal + 
             labs(y = "Brooding") + 
-            theme(axis.title.y = element_text(margin = margin(r = 10)),
+            theme(axis.title.y = element_text(margin = margin(r = 90)),
                   plot.title = element_blank()),
           posteriors_plot.brooding_waal.horizontal + 
             theme(plot.title = element_blank()),
           ncol = 2,
           nrow = 2,
-          widths = c(1, 0.75))
+          widths = c(1, 0.8))
 dev.off()
 
 # +++++++++++++++++++++++++++++ ####
