@@ -514,16 +514,16 @@ bf.brooding_bba <- brms::bf(breeding_outcome.bin ~
                         family = "bernoulli")
 
 ## Fit models
-brooding_brms.bba.sex <- brm(bf.brooding_bba,
-                          data = behaviour.bba_brooding, 
-                          cores = 4, chains = 4, 
-                          iter = 20000, warmup = 10000, thin = 10,
-                          control = list(adapt_delta = 0.9999, max_treedepth = 14),
-                          prior = priors.bba)
-
-summary(brooding_brms.bba.sex)
-pp_check(brooding_brms.bba.sex, ndraw = 50)
-save(brooding_brms.bba.sex, file = "Data_outputs/bba_brooding_brms_model_withSex.RData")
+# brooding_brms.bba.sex <- brm(bf.brooding_bba,
+#                           data = behaviour.bba_brooding, 
+#                           cores = 4, chains = 4, 
+#                           iter = 20000, warmup = 10000, thin = 10,
+#                           control = list(adapt_delta = 0.9999, max_treedepth = 14),
+#                           prior = priors.bba)
+# 
+# summary(brooding_brms.bba.sex)
+# pp_check(brooding_brms.bba.sex, ndraw = 50)
+# save(brooding_brms.bba.sex, file = "Data_outputs/bba_brooding_brms_model_withSex.RData")
 
 
 brooding_brms.waal.sex <- brm(bf.brooding,

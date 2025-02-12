@@ -40,6 +40,8 @@ options(dplyr.summarise.inform = FALSE)
 select <- dplyr::select
 
 
+# Define common parameters ------------------------------------------------
+
 ### Set colour parameters ------------------------------------------------------
 
 incub_col <- "#4682B4"
@@ -57,11 +59,20 @@ bi_col <- "#E97132"
 bi_col.low <- "#f59b6c"
 bi_col.high <- "#b54b14"
 
+
+
+### Define ROPE bounds ------------------------------------------------------
+
+rope_lower = -0.1
+rope_upper = 0.1
+
+
 ### Set species ----------------------------------------------------------------
 
 species <- c("baBI", "baKer", "waBI", "waCro")
 
 
+# ______________________________ ####
 # FAILURE RATES SUMMARY --------------------------------------------------------
 
 load("Data_inputs/BAS_demo_complete.RData")
@@ -86,303 +97,6 @@ failure_summary <- failure %>%
 
 t(failure_summary)
 
-# LOAD DATA ==========================================================
-
-## BBA - BIRD ISLAND (baBI) ##
-load("Data_inputs/bba_birdis_breedingTrips.RData")
-baBI_trips <- all_trips %>% distinct(); rm(all_trips)
-baBI_trips %<>% mutate(tripID = NA)
-
-# Remove implausible trips
-baBI_trips %<>% filter(duration.mins > 360 & duration.days < 31)
-
-# Remove birds where sex or breeding outcome unknown
-baBI_trips <- subset(baBI_trips, !is.na(rs))
-baBI_trips.sex <- subset(baBI_trips, !is.na(sex))
-
-
-## BBA - KERGUELEN (baKer) ##
-load("Data_inputs/bba_kerguelen_breedingTrips.RData")
-baKer_trips <- all_trips %>% distinct(); rm(all_trips)
-
-# Remove implausible trips
-baKer_trips %<>% filter(duration.mins > 360 & duration.days < 31)
-
-# Remove birds where sex or breeding outcome unknown
-baKer_trips <- subset(baKer_trips, !is.na(rs) & rs != "UNKNOWN")
-baKer_trips.sex <- subset(baKer_trips, !is.na(sex))
-
-
-## WAAL - BIRD ISLAND (waBI) ##
-load("Data_inputs/waal_birdis_breedingTrips.RData")
-waBI_trips <- all_trips %>% distinct(); rm(all_trips)
-
-# Remove implausible trips
-waBI_trips %<>% filter(duration.mins > 360 & duration.days < 31)
-
-# Remove birds where sex or breeding outcome unknown
-waBI_trips <- subset(waBI_trips, !is.na(rs))
-waBI_trips.sex <- subset(waBI_trips, !is.na(sex))
-
-
-
-## WAAL - CROZET (waCro) ##
-load("Data_inputs/waal_crozet_breedingTrips.RData")
-waCro_trips <- all_trips %>% distinct(); rm(all_trips)
-
-# Remove implausible trips
-waCro_trips %<>% filter(duration.mins > 360 & duration.days < 31)
-
-# Remove birds where sex or breeding outcome unknown
-waCro_trips <- subset(waCro_trips, !is.na(rs) & rs != "UNKNOWN" & rs != "NON-BREEDER")
-waCro_trips.sex <- subset(waCro_trips, !is.na(sex))
-
-# ______________________________ ####
-# DATA PROCESSING --------------------------------------------------------------
-
-### Incubation -----------------------------------------------------------------
-
-for (i in 1:length(species)) {
-  
-  my_species = species[i]
-  species_trips <- get(paste0(my_species, "_trips"))
-  species_trips %<>% select(-tripID) %>% distinct()
-  species_trips %<>% arrange(pairID, start)
-    
-  species_trips %<>%
-      filter(phase == "incubation") %>%
-      group_by(pairID, season) %>%
-      filter(n() >= 4) %>%
-      arrange(start) %>%
-      mutate(prev_trip.mins = lag(duration.mins)) %>%
-      group_by(ring) %>%
-      mutate(fasting_debt.hours = (duration.mins - prev_trip.mins)/60,
-             duration.hours = duration.mins/60) %>%
-      select(-prev_trip.mins) %>%
-    distinct()
-    
-  ## Fasting debt
-  fasting_metrics <- species_trips %>%
-    group_by(pairID, season) %>%
-    mutate(bird1 = ring[1],
-           bird2 = partner[1],
-           n_trips = n(),
-           trip_rank = row_number()) %>%
-    filter(!(n_trips %% 2 != 0 & trip_rank == max(trip_rank))) %>%
-    summarise(inc_time.1 = sum(duration.hours[ring == bird2], na.rm = TRUE),
-              inc_time.2 = sum(duration.hours[ring == bird1], na.rm = TRUE),
-              debt.days = abs(inc_time.1 - inc_time.2)) %>%
-    select(-c(inc_time.1, inc_time.2))
-  
-  ## Trip duration & variability
-  trip_metrics <- species_trips %>%
-     group_by(pairID, season) %>%
-     mutate(bird1 = ring[1],
-            bird2 = partner[1]) %>%
-     summarise(breeding_outcome = rs[1],
-               colony = colony[1],
-               species = species[1],
-     # Trip variability
-               sd_trip.1 = sd(duration.hours[ring == bird1], na.rm = T),
-               sd_trip.2 = sd(duration.hours[ring == bird2], na.rm = T),
-               diff_var.days = abs(sd_trip.1 - sd_trip.2),
-     # Median trip duration
-               median_trip.1 = median(na.omit(duration.hours[ring == bird1])),
-               median_trip.2 = median(na.omit(duration.hours[ring == bird2])),
-               median_trip.days = median(na.omit(duration.hours)),
-               diff_trip.days = abs(median_trip.1 - median_trip.2)) %>%
-     # Binary breeding outcome
-     mutate(breeding_outcome.bin = ifelse(breeding_outcome == "SUCCESSFUL", 1, 0)) %>%
-    select(-c(median_trip.1, median_trip.2, sd_trip.1, sd_trip.2))
-    
-  # Merge behaviour
-  pair_behaviour <- merge(trip_metrics, fasting_metrics, by = c("pairID", "season"))
-  pair_behaviour %<>% 
-    mutate(debt.days = debt.days/24,
-           median_trip.days = median_trip.days/24,
-           diff_trip.days = diff_trip.days/24,
-           diff_var.days = diff_var.days/24)
-  
-  ## For birds where sex is known ##
-  fasting_metrics.knownSex <- species_trips %>%
-    filter(!is.na(sex)) %>%
-    group_by(pairID, season) %>%
-    mutate(bird1 = ring[1],
-           bird2 = partner[1],
-           n_trips = n(),
-           trip_rank = row_number()) %>%
-    filter(!(n_trips %% 2 != 0 & trip_rank == max(trip_rank))) %>%
-    summarise(debt.F = sum(fasting_debt.hours[sex == "F"], na.rm = T),
-              debt.M = sum(fasting_debt.hours[sex == "M"], na.rm = T),
-              debt.days = (debt.M - debt.F)/24) %>%
-    select(-c(debt.F, debt.M))
-  
-  pair_behaviour.known_sex <- species_trips %>%
-      filter(!is.na(sex)) %>%
-      group_by(pairID, season) %>%
-      summarise(trip_days.F = median(duration.days[sex == "F"], na.rm = T),
-                trip_days.M = median(duration.days[sex == "M"], na.rm = T),
-                sd_trip.F = sd(duration.days[sex == "F"], na.rm = T),
-                sd_trip.M = sd(duration.days[sex == "M"], na.rm = T),
-                male_female_diff.var = sd_trip.M - sd_trip.F, 
-                breeding_outcome = rs[1],
-                colony = colony[1],
-                species = species[1]) %>%
-    # Binary breeding outcome
-    mutate(breeding_outcome.bin = ifelse(breeding_outcome == "SUCCESSFUL", 1, 0))
-    
-  pair_behaviour.known_sex <- merge(pair_behaviour.known_sex, fasting_metrics.knownSex,
-                                    by = c("pairID", "season"), all.x = TRUE)
-  
-  ## Output the data
-  assign(paste0(my_species, "_pair_behaviour"), pair_behaviour)
-  assign(paste0(my_species, "_pair_behaviour.known_sex"), pair_behaviour.known_sex)
-
-}
-
-## Make a combined dataframe with dummy species/col variable
-pair_behaviour.incub <- rbind(baBI_pair_behaviour %>% mutate(colony = "birdisland", species = "BBA", speCol = "baBI"), 
-                              baKer_pair_behaviour %>% mutate(colony = "kerguelen", species = "BBA", speCol = "baKer"), 
-                              waBI_pair_behaviour %>% mutate(colony = "birdisland", species = "WAAL", speCol = "waBI"),
-                              waCro_pair_behaviour %>% mutate(colony = "crozet", species = "WAAL", speCol = "waCro"))
-
-pair_behaviour.incub_withSex <- rbind(baBI_pair_behaviour.known_sex %>% mutate(colony = "birdisland", species = "BBA", speCol = "baBI"), 
-                                    baKer_pair_behaviour.known_sex %>% mutate(colony = "kerguelen", species = "BBA", speCol = "baKer"), 
-                                    waBI_pair_behaviour.known_sex %>% mutate(colony = "birdisland", species = "WAAL", speCol = "waBI"),
-                                    waCro_pair_behaviour.known_sex %>% mutate(colony = "crozet", species = "WAAL", speCol = "waCro"))
-
-
-save(pair_behaviour.incub, file = "Data_inputs/all_pair_behaviour_incub.RData")
-save(pair_behaviour.incub_withSex, file = "Data_inputs/all_pair_behaviour_incub_withSex.RData")
-
-
-
-### Brooding ------------------------------------------------------------------
-
-for (i in 1:length(species)) {
-  
-  my_species = species[i]
-  species_trips <- get(paste0(my_species, "_trips"))
-  species_trips %<>% select(-tripID) %>% distinct()
-  species_trips %<>% arrange(pairID, start)
-  
-  species_trips %<>%
-    filter(phase == "brooding") %>%
-    group_by(pairID, season) %>%
-    filter(n() >= 4) %>%
-    arrange(start) %>%
-    mutate(prev_trip.mins = lag(duration.mins)) %>%
-    group_by(ring) %>%
-    mutate(fasting_debt.hours = (duration.mins - prev_trip.mins)/60,
-           duration.hours = duration.mins/60) %>%
-    select(-prev_trip.mins) %>%
-    distinct()
-  
-  ## Fasting debt
-  fasting_metrics <- species_trips %>%
-    group_by(pairID, season) %>%
-    mutate(bird1 = ring[1],
-           bird2 = partner[1],
-           n_trips = n(),
-           trip_rank = row_number()) %>%
-    filter(!(n_trips %% 2 != 0 & trip_rank == max(trip_rank))) %>%
-    summarise(inc_time.1 = sum(duration.hours[ring == bird2], na.rm = TRUE),
-              inc_time.2 = sum(duration.hours[ring == bird1], na.rm = TRUE),
-              debt.days = abs(inc_time.1 - inc_time.2)) %>%
-    select(-c(inc_time.1, inc_time.2))
-  
-  ## Trip duration & variability
-  trip_metrics <- species_trips %>%
-    group_by(pairID, season) %>%
-    mutate(bird1 = ring[1],
-           bird2 = partner[1]) %>%
-    summarise(breeding_outcome = rs[1],
-              colony = colony[1],
-              species = species[1],
-              # Trip variability
-              sd_trip.1 = sd(duration.hours[ring == bird1], na.rm = T),
-              sd_trip.2 = sd(duration.hours[ring == bird2], na.rm = T),
-              diff_var.days = abs(sd_trip.1 - sd_trip.2),
-              # Median trip duration
-              median_trip.1 = median(na.omit(duration.hours[ring == bird1])),
-              median_trip.2 = median(na.omit(duration.hours[ring == bird2])),
-              median_trip.days = median(na.omit(duration.hours)),
-              diff_trip.days = abs(median_trip.1 - median_trip.2)) %>%
-    # Binary breeding outcome
-    mutate(breeding_outcome.bin = ifelse(breeding_outcome == "SUCCESSFUL", 1, 0)) %>%
-    select(-c(median_trip.1, median_trip.2, sd_trip.1, sd_trip.2))
-  
-  # Merge behaviour
-  pair_behaviour <- merge(trip_metrics, fasting_metrics, by = c("pairID", "season"))
-  pair_behaviour %<>% 
-    mutate(debt.days = debt.days/24,
-           median_trip.days = median_trip.days/24,
-           diff_trip.days = diff_trip.days/24,
-           diff_var.days = diff_var.days/24)
-  
-  ## For birds where sex is known ##
-  fasting_metrics.knownSex <- species_trips %>%
-    filter(!is.na(sex)) %>%
-    group_by(pairID, season) %>%
-    mutate(bird1 = ring[1],
-           bird2 = partner[1],
-           n_trips = n(),
-           trip_rank = row_number()) %>%
-    filter(!(n_trips %% 2 != 0 & trip_rank == max(trip_rank))) %>%
-    summarise(debt.F = sum(fasting_debt.hours[sex == "F"], na.rm = T),
-              debt.M = sum(fasting_debt.hours[sex == "M"], na.rm = T),
-              debt.days = (debt.M - debt.F)/24) %>%
-    select(-c(debt.F, debt.M))
-  
-  pair_behaviour.known_sex <- species_trips %>%
-    filter(!is.na(sex)) %>%
-    group_by(pairID, season) %>%
-    summarise(trip_days.F = median(duration.days[sex == "F"], na.rm = T),
-              trip_days.M = median(duration.days[sex == "M"], na.rm = T),
-              sd_trip.F = sd(duration.days[sex == "F"], na.rm = T),
-              sd_trip.M = sd(duration.days[sex == "M"], na.rm = T),
-              male_female_diff.var = sd_trip.M - sd_trip.F, 
-              breeding_outcome = rs[1],
-              colony = colony[1],
-              species = species[1]) %>%
-    # Binary breeding outcome
-    mutate(breeding_outcome.bin = ifelse(breeding_outcome == "SUCCESSFUL", 1, 0))
-  
-  pair_behaviour.known_sex <- merge(pair_behaviour.known_sex, fasting_metrics.knownSex,
-                                    by = c("pairID", "season"), all.x = TRUE)
-  
-  ## Output the data
-  assign(paste0(my_species, "_pair_behaviour"), pair_behaviour)
-  assign(paste0(my_species, "_pair_behaviour.known_sex"), pair_behaviour.known_sex)
-  
-}
-
-## Make a combined dataframe with dummy species/col variable
-pair_behaviour.brooding <- rbind(baBI_pair_behaviour %>% mutate(colony = "birdisland", species = "BBA", speCol = "baBI"), 
-                              baKer_pair_behaviour %>% mutate(colony = "kerguelen", species = "BBA", speCol = "baKer"), 
-                              waBI_pair_behaviour %>% mutate(colony = "birdisland", species = "WAAL", speCol = "waBI"),
-                              waCro_pair_behaviour %>% mutate(colony = "crozet", species = "WAAL", speCol = "waCro"))
-
-pair_behaviour.brooding_withSex <- rbind(baBI_pair_behaviour.known_sex %>% mutate(colony = "birdisland", species = "BBA", speCol = "baBI"), 
-                                         baKer_pair_behaviour.known_sex %>% mutate(colony = "kerguelen", species = "BBA", speCol = "baKer"), 
-                                         waBI_pair_behaviour.known_sex %>% mutate(colony = "birdisland", species = "WAAL", speCol = "waBI"),
-                                         waCro_pair_behaviour.known_sex %>% mutate(colony = "crozet", species = "WAAL", speCol = "waCro"))
-
-
-save(pair_behaviour.brooding, file = "Data_inputs/all_pair_behaviour_brooding.RData")
-save(pair_behaviour.brooding_withSex, file = "Data_inputs/all_pair_behaviour_brooding_withSex.RData")
-
-
-### Make some space ---------------------------------------------------------
-
-rm(baBI_trips); rm(baBI_trips.sex); rm(baKer_trips); rm(baKer_trips.sex);
-rm(waBI_trips); rm(waBI_trips.sex); rm(waCro_trips); rm(waCro_trips.sex);
-rm(baBI_pair_behaviour); rm(baKer_pair_behaviour); rm(waBI_pair_behaviour);
-rm(waCro_pair_behaviour); rm(baBI_pair_behaviour.known_sex); 
-rm(baKer_pair_behaviour.known_sex); rm(waBI_pair_behaviour.known_sex); 
-rm(waCro_pair_behaviour.known_sex); rm(species_trips)
-
-gc()
 
 # SAMPLE SIZES =================================================================
 
@@ -647,7 +361,7 @@ pp_check(incub_brms.waal, ndraw = 50)
 save(incub_brms.waal, file = "Data_outputs/waal_incub_brms_model.RData")
 
 
-# ............................................................ ####
+# ______________________________ ####
 # VISUALISE --------------------------------------------------------------------
 
 load("Data_inputs/all_pair_behaviour_incub.RData")
@@ -706,26 +420,33 @@ my_labels <- c("Trip variability \n(difference)",
                "Pair debt \n(summed)")
 
 posteriors_plot.incub_bba.horizontal <- 
-  ggplot(posteriors.incub_bba, aes(x = value, y = variable)) +
+  ggplot() +
   stat_halfeye(data = subset(posteriors.incub_bba, colony == "Bird Island"), 
                side = "bottom", 
-               aes(fill = ifelse(after_stat(x) < 0, "bi_low", "bi_high")),
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
                height = 0.7) +
   stat_halfeye(data = subset(posteriors.incub_bba, colony == "Kerguelen"), 
                side = "top", 
-               aes(fill = ifelse(after_stat(x) < 0, "ker_low", "ker_high")),
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
                height = 0.7) +
   scale_fill_manual(values = c(
     "bi_low" = bi_col.low, "bi_high" = bi_col.high,
     "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
-  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
-  xlim(-1.5, 2.5) +
   scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+   geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
   labs(y = "", x = "Posterior estimate",
        title = "Black-browed albatrosses") +
   theme_bw() +
   theme(text = element_text(size = 16, family = "Calibri"),
         legend.position = "none")
+
+
 
 #### WAAL  ---------------------------------------------------------------------
 ##### Estimates ---------------------------------------------------------------------
@@ -767,44 +488,48 @@ posteriors.incub_waal %<>%
 ##### Plot ---------------------------------------------------------------
 
 posteriors_plot.incub_waal.horizontal <- 
-  ggplot(posteriors.incub_waal, aes(x = value, y = variable)) +
+  ggplot() +
   stat_halfeye(data = subset(posteriors.incub_waal, colony == "Bird Island"), 
                side = "bottom", 
-               aes(fill = ifelse(after_stat(x) < 0, "bi_low", "bi_high")),
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
                height = 0.7) +
   stat_halfeye(data = subset(posteriors.incub_waal, colony == "Crozet"), 
                side = "top", 
-               aes(fill = ifelse(after_stat(x) < 0, "cro_low", "cro_high")),
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "cro_low", 
+                                 ifelse(after_stat(x) > rope_upper, "cro_high", "grey80"))),
                height = 0.7) +
   scale_fill_manual(values = c(
     "bi_low" = bi_col.low, "bi_high" = bi_col.high,
     "cro_low" = cro_col.low, "cro_high" = cro_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
   geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+            fill = "lightcyan4", alpha = 0.25) +
   labs(y = "", x = "Posterior estimate",
        title = "Wandering albatrosses") +
-  xlim(-1.5, 1.2) +
   theme_bw() +
   theme(text = element_text(size = 16, family = "Calibri"),
-        legend.position = "none",
-        axis.text.y = element_blank())
-
+        legend.position = "none")
 
 
 #### COMBINED posterior plots -----------------------------------------------------------
-png(file = "Figures/posterior_estimates_incub_horizontal.png", 
-    width = 15, height = 9, units = "in", res = 600)
-ggarrange(posteriors_plot.incub_bba.horizontal + theme(plot.margin = unit(c(1,0.05,1,3), "cm")), 
-          posteriors_plot.incub_waal.horizontal + theme(plot.margin = unit(c(1,1,1,0.75), "cm")), 
-          ncol = 2,
-          widths = c(1, 0.9))
-dev.off()
-
-# Laptop
-png(file = "Figures/posterior_estimates_incub_horizontal2.png", 
-    width = 15, height = 9, units = "in", res = 100)
-ggarrange(posteriors_plot.incub_bba.horizontal, posteriors_plot.incub_waal.horizontal,
-          ncol = 2, widths = c(1, 0.85))
-dev.off()
+# png(file = "Figures/posterior_estimates_incub_horizontal.png", 
+#     width = 15, height = 9, units = "in", res = 600)
+# ggarrange(posteriors_plot.incub_bba.horizontal + theme(plot.margin = unit(c(1,0.05,1,3), "cm")), 
+#           posteriors_plot.incub_waal.horizontal + theme(plot.margin = unit(c(1,1,1,0.75), "cm")), 
+#           ncol = 2,
+#           widths = c(1, 0.9))
+# dev.off()
+# 
+# # Laptop
+# png(file = "Figures/posterior_estimates_incub_horizontal2.png", 
+#     width = 15, height = 9, units = "in", res = 100)
+# ggarrange(posteriors_plot.incub_bba.horizontal, posteriors_plot.incub_waal.horizontal,
+#           ncol = 2, widths = c(1, 0.85))
+# dev.off()
 
 
 
@@ -921,23 +646,15 @@ exp_coef <- round(exp(bbal_incub.fixef[,c(1, 3, 4)]), digits = 2)
 colnames(exp_coef) <- c("Estimate_exp", "LCI_exp", "UCI_exp")
 rownames(exp_coef) <- NULL
 
-# Get prop above/below zero
-below_zero <- data.frame(apply(posterior_samples.incub_bba[,1:10], 2, below_zero.func))
-below_zero <- below_zero[,1]
-
-above_zero <- data.frame(apply(posterior_samples.incub_bba[,1:10], 2, above_zero.func))
-above_zero <- above_zero[,1]
+# Get proportion in ROPE
+prop_rope <-  data.frame(apply(posterior_samples.incub_bba[,1:10], 2, prop_rope.func))
+prop_rope <- prop_rope[,1]
 
 ## Bind everything together
 bbal_incub.fixef <- cbind(bbal_incub.fixef, exp_coef)
-bbal_incub.fixef$below_zero <- round(below_zero, digits = 2)
-bbal_incub.fixef$above_zero <- round(above_zero, digits = 2)
+bbal_incub.fixef$prop_rope <- round(prop_rope, digits = 2)
 
-## Get Kerguelen estimates separately
-bbal_incub.fixef_extra <- bbal_incub.fixef %>% 
-  mutate(Est.extra = NA, LCI.extra = NA, UCI.extra = NA, below.extra = NA, above.extra = NA)
-
-### Process each variable
+## Process each variable
 ker_debt <- process_interaction_estimates("b_debt.days", bbal_incub.fixef, posterior_samples.incub_bba, "b_debt.days:colonykerguelen")
 ker_median_trip <- process_interaction_estimates("b_median_trip.days", bbal_incub.fixef, posterior_samples.incub_bba, "b_colonykerguelen:median_trip.days")
 ker_diff_trip <- process_interaction_estimates("b_diff_trip.days", bbal_incub.fixef, posterior_samples.incub_bba, "b_colonykerguelen:diff_trip.days")
@@ -945,19 +662,10 @@ ker_diff_var <- process_interaction_estimates("b_diff_var.days", bbal_incub.fixe
 
 # Combine the results with the original fixef data
 ker_fixef <- rbind(ker_debt, ker_median_trip, ker_diff_trip, ker_diff_var)
-colnames(ker_fixef) <- colnames(bbal_incub.fixef_extra)
+colnames(ker_fixef) <- colnames(bbal_incub.fixef)
 
-bbal_incub.fixef_extra <- rbind(bbal_incub.fixef_extra, ker_fixef)
-bbal_incub.fixef_extra
+bbal_incub.fixef <- rbind(bbal_incub.fixef, ker_fixef)
 
-
-#### Readable estimates for manuscript -----
-
-log_to_percent(bbal_incub.fixef$Estimate[2]); log_to_percent(bbal_incub.fixef$`l-95% CI`[2]); log_to_percent(bbal_incub.fixef$`u-95% CI`[2])
-log_to_percent(bbal_incub.fixef$Estimate[4]); log_to_percent(bbal_incub.fixef$`l-95% CI`[4]); log_to_percent(bbal_incub.fixef$`u-95% CI`[4])
-
-log_to_percent(bbal_incub.fixef$Estimate[5]); log_to_percent(bbal_incub.fixef$`l-95% CI`[5]); log_to_percent(bbal_incub.fixef$`u-95% CI`[5])
-log_to_percent(bbal_incub.fixef$Estimate[6]); log_to_percent(bbal_incub.fixef$`l-95% CI`[6]); log_to_percent(bbal_incub.fixef$`u-95% CI`[6])
 
 
 ### WAAL ---------------------------------------------------------------------
@@ -974,21 +682,13 @@ exp_coef <- round(exp(waal_incub.fixef[,c(1, 3, 4)]), digits = 2)
 colnames(exp_coef) <- c("Estimate_exp", "LCI_exp", "UCI_exp")
 rownames(exp_coef) <- NULL
 
-# Get prop above/below zero
-below_zero <- data.frame(apply(posterior_samples.incub_waal[,1:10], 2, below_zero.func))
-below_zero <- below_zero[,1]
-
-above_zero <- data.frame(apply(posterior_samples.incub_waal[,1:10], 2, above_zero.func))
-above_zero <- above_zero[,1]
+# Get proportion in ROPE
+prop_rope <-  data.frame(apply(posterior_samples.incub_waal[,1:10], 2, prop_rope.func))
+prop_rope <- prop_rope[,1]
 
 ## Bind everything together
 waal_incub.fixef <- cbind(waal_incub.fixef, exp_coef)
-waal_incub.fixef$below_zero <- round(below_zero, digits = 2)
-waal_incub.fixef$above_zero <- round(above_zero, digits = 2)
-
-## Get Crozet estimates separately
-waal_incub.fixef_extra <- waal_incub.fixef %>% 
-  mutate(Est.extra = NA, LCI.extra = NA, UCI.extra = NA, below.extra = NA, above.extra = NA)
+waal_incub.fixef$prop_rope <- round(prop_rope, digits = 2)
 
 ### Process each variable
 cro_debt <- process_interaction_estimates("b_debt.days", waal_incub.fixef, posterior_samples.incub_waal, "b_debt.days:colonycrozet")
@@ -998,23 +698,12 @@ cro_diff_var <- process_interaction_estimates("b_diff_var.days", waal_incub.fixe
 
 # Combine the results with the original fixef data
 cro_fixef <- rbind(cro_debt, cro_median_trip, cro_diff_trip, cro_diff_var)
-colnames(cro_fixef) <- colnames(waal_incub.fixef_extra)
+colnames(cro_fixef) <- colnames(waal_incub.fixef)
 
-waal_incub.fixef_extra <- rbind(waal_incub.fixef_extra, cro_fixef)
-waal_incub.fixef_extra
+waal_incub.fixef <- rbind(waal_incub.fixef, cro_fixef)
 
 
-#### Readable estimates for manuscript -----
 
-# Trip duration
-log_to_percent(waal_incub.fixef$Estimate[4]); log_to_percent(waal_incub.fixef$`l-95% CI`[4]); log_to_percent(waal_incub.fixef$`u-95% CI`[4])
-
-log_to_percent(waal_incub.fixef$Estimate[4]+waal_incub.fixef$Estimate[8]) ; log_to_percent(waal_incub.fixef$`l-95% CI`[4]+waal_incub.fixef$`l-95% CI`[8]) ; 
-log_to_percent(waal_incub.fixef$`u-95% CI`[4]+waal_incub.fixef$`u-95% CI`[8])
-
-# Within-pair trip variability difference (Crozet)
-log_to_percent(waal_incub.fixef$Estimate[6]+waal_incub.fixef$Estimate[10]) ; log_to_percent(waal_incub.fixef$`l-95% CI`[6]+waal_incub.fixef$`l-95% CI`[10]) ; 
-log_to_percent(waal_incub.fixef$`u-95% CI`[6]+waal_incub.fixef$`u-95% CI`[10])
 
 # ______________________________ ####
 # ~ * BROODING * ~ ###########################################################
@@ -1075,7 +764,7 @@ summary(brooding_brms.waal)
 pp_check(brooding_brms.waal)
 save(brooding_brms.waal, file = "Data_outputs/waal_brooding_brms_model.RData")
 
-# ............................................................ ####
+# ______________________________ ####
 # VISUALISE --------------------------------------------------------------------
 
 load("Data_inputs/all_pair_behaviour_brooding.RData")
@@ -1133,23 +822,28 @@ my_labels <- c("Trip variability \n(difference)",
                "Pair debt \n(summed)")
 
 posteriors_plot.brooding_bba.horizontal <- 
-  ggplot(posteriors.brooding_bba, aes(x = value, y = variable)) +
+  ggplot() +
   stat_halfeye(data = subset(posteriors.brooding_bba, colony == "Bird Island"), 
                side = "bottom", 
-               aes(fill = ifelse(after_stat(x) < 0, "bi_low", "bi_high")),
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
                height = 0.7) +
   stat_halfeye(data = subset(posteriors.brooding_bba, colony == "Kerguelen"), 
                side = "top", 
-               aes(fill = ifelse(after_stat(x) < 0, "ker_low", "ker_high")),
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
                height = 0.7) +
   scale_fill_manual(values = c(
     "bi_low" = bi_col.low, "bi_high" = bi_col.high,
     "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
-  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
   scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+            fill = "lightcyan4", alpha = 0.25) +
   labs(y = "", x = "Posterior estimate",
        title = "Black-browed albatrosses") +
-  xlim(-16, 15) +
   theme_bw() +
   theme(text = element_text(size = 16, family = "Calibri"),
         legend.position = "none")
@@ -1194,40 +888,46 @@ posteriors.brooding_waal %<>%
                                           "b_diff_trip.days", 
                                           "b_diff_var.days"))))
 
-#### Plots ---------------------------------------------------------------------
+##### Plots ---------------------------------------------------------------------
 
 posteriors_plot.brooding_waal.horizontal <- 
-  ggplot(posteriors.brooding_waal, aes(x = value, y = variable)) +
+  ggplot() +
   stat_halfeye(data = subset(posteriors.brooding_waal, colony == "Bird Island"), 
                side = "bottom", 
-               aes(fill = ifelse(after_stat(x) < 0, "bi_low", "bi_high")),
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
                height = 0.7) +
   stat_halfeye(data = subset(posteriors.brooding_waal, colony == "Crozet"), 
                side = "top", 
-               aes(fill = ifelse(after_stat(x) < 0, "cro_low", "cro_high")),
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "cro_low", 
+                                 ifelse(after_stat(x) > rope_upper, "cro_high", "grey80"))),
                height = 0.7) +
   scale_fill_manual(values = c(
     "bi_low" = bi_col.low, "bi_high" = bi_col.high,
     "cro_low" = cro_col.low, "cro_high" = cro_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
   geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+            fill = "lightcyan4", alpha = 0.25) +
   labs(y = "", x = "Posterior estimate",
        title = "Wandering albatrosses") +
-  #xlim(-3.2, 1.5) +
   theme_bw() +
   theme(text = element_text(size = 16, family = "Calibri"),
-        legend.position = "none",
-        axis.text.y = element_blank())
+        legend.position = "none")
+
 
 
 ### Combined posterior plots -----------------------------------------------------------
 
-png(file = "Figures/rs_failure/posterior_estimates_brooding_horizontal.png", 
-    width = 15, height = 9, units = "in", res = 600)
-ggarrange(posteriors_plot.brooding_bba.horizontal + theme(plot.margin = unit(c(1,0.05,1,3), "cm")), 
-          posteriors_plot.brooding_waal.horizontal + theme(plot.margin = unit(c(1,1,1,0.75), "cm")), 
-          ncol = 2,
-          widths = c(1, 0.9))
-dev.off()
+# png(file = "Figures/rs_failure/posterior_estimates_brooding_horizontal.png", 
+#     width = 15, height = 9, units = "in", res = 600)
+# ggarrange(posteriors_plot.brooding_bba.horizontal + theme(plot.margin = unit(c(1,0.05,1,3), "cm")), 
+#           posteriors_plot.brooding_waal.horizontal + theme(plot.margin = unit(c(1,1,1,0.75), "cm")), 
+#           ncol = 2,
+#           widths = c(1, 0.9))
+# dev.off()
 
 # Laptop #
 # png(file = "Figures/rs_failure/posterior_estimates_brooding_horizontal.png", width = 15, height = 9, units = "in", res = 600)
@@ -1323,7 +1023,7 @@ for (i in 1:length(effects)) {
 close(pb)
 
 
-# ............................................................ ####
+# ______________________________ ####
 # INTERPRETATION --------------------------------------------------------------
 
 load("Data_inputs/all_pair_behaviour_brooding.RData")
@@ -1332,10 +1032,12 @@ load("Data_outputs/bba_brooding_brms_model.RData")
 load("Data_outputs/waal_brooding_brms_model.RData")
 
 ### BBAL ---------------------------------------------------------------------
+
 summary(brooding_brms.bba)
 posterior_samples.brooding_bba <- posterior_samples(brooding_brms.bba)
 
-#### Overall summary table ------------------------------
+##### Overall summary table ------------------------------
+
 bbal_brooding.fixef <- round(summary(brooding_brms.bba)$fixed, digits = 2)
 bbal_brooding.fixef[,c(6,7)] <- round(bbal_brooding.fixef[,c(6,7)], digits = 0)
 
@@ -1344,23 +1046,15 @@ exp_coef <- round(exp(bbal_brooding.fixef[,c(1, 3, 4)]), digits = 2)
 colnames(exp_coef) <- c("Estimate_exp", "LCI_exp", "UCI_exp")
 rownames(exp_coef) <- NULL
 
-# Get prop above/below zero
-below_zero <- data.frame(apply(posterior_samples.brooding_bba[,1:10], 2, below_zero.func))
-below_zero <- below_zero[,1]
-
-above_zero <- data.frame(apply(posterior_samples.brooding_bba[,1:10], 2, above_zero.func))
-above_zero <- above_zero[,1]
+# Get proportion in ROPE
+prop_rope <-  data.frame(apply(posterior_samples.brooding_bba[,1:10], 2, prop_rope.func))
+prop_rope <- prop_rope[,1]
 
 ## Bind everything together
 bbal_brooding.fixef <- cbind(bbal_brooding.fixef, exp_coef)
-bbal_brooding.fixef$below_zero <- round(below_zero, digits = 2)
-bbal_brooding.fixef$above_zero <- round(above_zero, digits = 2)
+bbal_brooding.fixef$prop_rope <- round(prop_rope, digits = 2)
 
-## Get Kerguelen estimates separately
-bbal_brooding.fixef_extra <- bbal_brooding.fixef %>% 
-  mutate(Est.extra = NA, LCI.extra = NA, UCI.extra = NA, below.extra = NA, above.extra = NA)
-
-### Process each variable
+## Process each variable
 ker_debt <- process_interaction_estimates("b_debt.days", bbal_brooding.fixef, posterior_samples.brooding_bba, "b_debt.days:colonykerguelen")
 ker_median_trip <- process_interaction_estimates("b_median_trip.days", bbal_brooding.fixef, posterior_samples.brooding_bba, "b_colonykerguelen:median_trip.days")
 ker_diff_trip <- process_interaction_estimates("b_diff_trip.days", bbal_brooding.fixef, posterior_samples.brooding_bba, "b_colonykerguelen:diff_trip.days")
@@ -1368,14 +1062,9 @@ ker_diff_var <- process_interaction_estimates("b_diff_var.days", bbal_brooding.f
 
 # Combine the results with the original fixef data
 ker_fixef <- rbind(ker_debt, ker_median_trip, ker_diff_trip, ker_diff_var)
-colnames(ker_fixef) <- colnames(bbal_brooding.fixef_extra)
+colnames(ker_fixef) <- colnames(bbal_brooding.fixef)
 
-bbal_brooding.fixef_extra <- rbind(bbal_brooding.fixef_extra, ker_fixef)
-bbal_brooding.fixef_extra
-
-#### Readable estimates for manuscript -----
-
-log_to_percent(bbal_brooding.fixef$Estimate[4]); log_to_percent(bbal_brooding.fixef$`l-95% CI`[4]); log_to_percent(bbal_brooding.fixef$`u-95% CI`[4])
+bbal_brooding.fixef <- rbind(bbal_brooding.fixef, ker_fixef)
 
 
 
@@ -1383,7 +1072,7 @@ log_to_percent(bbal_brooding.fixef$Estimate[4]); log_to_percent(bbal_brooding.fi
 summary(brooding_brms.waal)
 posterior_samples.brooding_waal <- posterior_samples(brooding_brms.waal)
 
-#### Overall summary table ------------------------------
+### Overall summary table ------------------------------
 
 waal_brooding.fixef <- round(summary(brooding_brms.waal)$fixed, digits = 2)
 waal_brooding.fixef[,c(6,7)] <- round(waal_brooding.fixef[,c(6,7)], digits = 0)
@@ -1393,21 +1082,13 @@ exp_coef <- round(exp(waal_brooding.fixef[,c(1, 3, 4)]), digits = 2)
 colnames(exp_coef) <- c("Estimate_exp", "LCI_exp", "UCI_exp")
 rownames(exp_coef) <- NULL
 
-# Get prop above/below zero
-below_zero <- data.frame(apply(posterior_samples.brooding_waal[,1:10], 2, below_zero.func))
-below_zero <- below_zero[,1]
-
-above_zero <- data.frame(apply(posterior_samples.brooding_waal[,1:10], 2, above_zero.func))
-above_zero <- above_zero[,1]
+# Get proportion in ROPE
+prop_rope <-  data.frame(apply(posterior_samples.brooding_waal[,1:10], 2, prop_rope.func))
+prop_rope <- prop_rope[,1]
 
 ## Bind everything together
 waal_brooding.fixef <- cbind(waal_brooding.fixef, exp_coef)
-waal_brooding.fixef$below_zero <- round(below_zero, digits = 2)
-waal_brooding.fixef$above_zero <- round(above_zero, digits = 2)
-
-## Get Crozet estimates separately
-waal_brooding.fixef_extra <- waal_brooding.fixef %>% 
-  mutate(Est.extra = NA, LCI.extra = NA, UCI.extra = NA, below.extra = NA, above.extra = NA)
+waal_brooding.fixef$prop_rope <- round(prop_rope, digits = 2)
 
 ### Process each variable
 cro_debt <- process_interaction_estimates("b_debt.days", waal_brooding.fixef, posterior_samples.brooding_waal, "b_debt.days:colonycrozet")
@@ -1417,29 +1098,20 @@ cro_diff_var <- process_interaction_estimates("b_diff_var.days", waal_brooding.f
 
 # Combine the results with the original fixef data
 cro_fixef <- rbind(cro_debt, cro_median_trip, cro_diff_trip, cro_diff_var)
-colnames(cro_fixef) <- colnames(waal_brooding.fixef_extra)
+colnames(cro_fixef) <- colnames(waal_brooding.fixef)
 
-waal_brooding.fixef_extra <- rbind(waal_brooding.fixef_extra, cro_fixef)
-waal_brooding.fixef_extra
+waal_brooding.fixef <- rbind(waal_brooding.fixef, cro_fixef)
 
 
-#### Readable estimates for manuscript -----
 
-# Crozet effects
-## Pair debt - for illustration
-debt <- waal_brooding.fixef$Estimate[2]
-debt_cro <- waal_brooding.fixef$Estimate[7]
 
-log_to_percent(debt+debt_cro)
-log_to_percent(waal_brooding.fixef$`l-95% CI`[2] + waal_brooding.fixef$`l-95% CI`[7])
-log_to_percent(waal_brooding.fixef$`u-95% CI`[2] + waal_brooding.fixef$`u-95% CI`[7])
-
-# ++++++++++++++++++++++++ ####
+# ______________________________ ####
 # * FIGURE 1 * COMBINED POSTERIOR PLOTS ========================================
 
 # Add albatross silhouettes
 posteriors_plot.incub_bba.horizontal2<- ggdraw() +
   draw_plot(posteriors_plot.incub_bba.horizontal + labs(y = "Incubation") +
+              #xlim(-1.5, 1.5) +
               theme(axis.title.y = element_text(margin = margin(r = 90)),
                     axis.title.x = element_blank(),
                     text = element_text(size = 16, family = "Calibri"))) +
@@ -1450,6 +1122,7 @@ posteriors_plot.incub_bba.horizontal2<- ggdraw() +
 posteriors_plot.incub_waal.horizontal2 <- ggdraw() +
   draw_plot(posteriors_plot.incub_waal.horizontal +
               theme(axis.title.x = element_blank(),
+                    axis.text.y = element_blank(),
                     text = element_text(size = 16, family = "Calibri"))) +
   draw_image(file.path("Figures/waal_standing_silhouette.png"),
              scale = 0.2, x = 0.38, y = 0.32)
@@ -1463,7 +1136,8 @@ ggarrange(posteriors_plot.incub_bba.horizontal2,
             theme(axis.title.y = element_text(margin = margin(r = 90)),
                   plot.title = element_blank()),
           posteriors_plot.brooding_waal.horizontal + 
-            theme(plot.title = element_blank()),
+            theme(plot.title = element_blank(),
+                  axis.text.y = element_blank()),
           ncol = 2,
           nrow = 2,
           widths = c(1, 0.8))
@@ -1503,10 +1177,11 @@ dev.off()
 # dev.off()
 
 
-# * FIGURE 2 * BBAL INCUB CONDITIONAL PLOTS ==========================================
+# * FIGURE 2 * BBAL CONDITIONAL PLOTS ==========================================
 
-cond_plot.debt.days.bba_incub2<- ggdraw() +
-  draw_plot(cond_plot.debt.days.bba_incub + labs(tag = "A",y = "P|Breeding success") +
+cond_plot.median_trip.days.bba_incub2 <- ggdraw() +
+  draw_plot(cond_plot.median_trip.days.bba_incub + labs(tag = "A",
+                                                        y = "Incubation \nP|Breeding success") +
               theme(axis.title.y = element_text(margin = margin(r = 35)),
                     plot.tag = element_text(size = 16, face = "bold"),
                     plot.tag.position = c(0.05, 1.01),
@@ -1517,61 +1192,32 @@ cond_plot.debt.days.bba_incub2<- ggdraw() +
 
 png(file = "Figures/FIGURE2.png", width = 10, height = 10, units = "in", res = 300)
 ggarrange(
-  cond_plot.debt.days.bba_incub2,
-  cond_plot.median_trip.days.bba_incub + 
-    labs(tag = "B") + 
+  cond_plot.median_trip.days.bba_incub2,
+  NULL,
+  cond_plot.median_trip.days.bba_brooding + 
+    labs(tag = "B", y = "Brooding \nP|Breeding success") + 
+    xlim(0.5, 5.8) +
+    theme(plot.tag = element_text(size = 16, face = "bold"),
+          axis.title.y = element_text(margin = margin(r = 35)),
+          plot.tag.position = c(0.05, 1.01),
+          plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm")),
+  cond_plot.diff_trip.days.bba_brooding + 
+    labs(tag = "C") +
     theme(axis.text.y = element_blank(),
           axis.title.y = element_blank(),
           plot.tag = element_text(size = 16, face = "bold")),
-  cond_plot.diff_trip.days.bba_incub + 
-    labs(tag = "C", y = "P|Breeding success") +
-    theme(axis.title.y = element_text(margin = margin(r = 35)),
-          plot.tag = element_text(size = 16, face = "bold"),
-          plot.tag.position = c(0.05, 1.01),
-          plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm")),
-  cond_plot.diff_var.days.bba_incub + 
-    labs(tag = "D") +
-    theme(axis.title.y = element_blank(),
-          axis.text.y = element_blank(),
-          plot.tag = element_text(size = 16, face = "bold")),
   ncol = 2,
   nrow = 2,
-  widths = c(1, 0.85) # pc: c(1, 0.825, 0.825) laptop =0.85
+  widths = c(1, 0.85)
 )
 dev.off()
 
 
-# * FIGURE 3 * BBAL BROOD CONDITIONAL PLOTS ==========================================
-
-cond_plot.median_trip.days.bba_brooding2 <- ggdraw() +
-  draw_plot(cond_plot.median_trip.days.bba_brooding + labs(tag = "A",y = "P|Breeding success") +
-              theme(axis.title.y = element_text(margin = margin(r = 35)),
-                    plot.tag = element_text(size = 16, face = "bold"),
-                    plot.tag.position = c(0.05, 1.01),
-                    plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm"),
-                    text = element_text(size = 16, family = "Calibri"))) +
-  draw_image(file.path("Figures/bba_standing_silhouette.png"),
-             scale = 0.15, x = 0.39, y = -0.3) 
-
-png(file = "Figures/FIGURE3.png", width = 12, height = 6, units = "in", res = 300)
-ggarrange(
-  cond_plot.median_trip.days.bba_brooding2,
-  cond_plot.diff_var.days.bba_incub + 
-    labs(tag = "B") +
-    theme(axis.title.y = element_blank(),
-          axis.text.y = element_blank(),
-          plot.tag = element_text(size = 16, face = "bold")),
-  ncol = 2,
-  nrow = 1,
-  widths = c(1, 0.85, 0.85) # pc: c(1, 0.825, 0.825) laptop =0.85
-)
-dev.off()
-
-# * FIGURE 4 * WAAL CONDITIONAL PLOTS ==========================================
+# * FIGURE 3 * WAAL CONDITIONAL PLOTS ==========================================
 
 # Add albatross silhouette
-cond_plot.median_trip.days.waal_incub2 <- ggdraw() +
-  draw_plot(cond_plot.median_trip.days.waal_incub +
+cond_plot.diff_var.days.waal_incub2 <- ggdraw() +
+  draw_plot(cond_plot.diff_var.days.waal_incub +
               labs(tag = "A", y = "Incubation \nP|Breeding success") +
               theme(axis.title.y = element_text(margin = margin(r = 35)),
                     plot.tag = element_text(size = 16, face = "bold"),
@@ -1579,26 +1225,27 @@ cond_plot.median_trip.days.waal_incub2 <- ggdraw() +
                     plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm"),
                     text = element_text(size = 16, family = "Calibri"))) +
   draw_image(file.path("Figures/waal_standing_silhouette.png"),
-             scale = 0.2, x = 0.38, y = -0.22)
+             scale = 0.2, x = -0.15, y = -0.22)
 
 
-png(file = "Figures/FIGURE4.png", width = 10, height = 10, units = "in", res = 300)
+png(file = "Figures/FIGURE3.png", width = 10, height = 10, units = "in", res = 300)
 ggarrange(
-  cond_plot.median_trip.days.waal_incub2,
-  cond_plot.diff_var.days.waal_incub + 
-    labs(tag = "B") + 
+  cond_plot.diff_var.days.waal_incub2,
+  NULL,
+  cond_plot.median_trip.days.waal_brooding + 
+    labs(tag = "B", y = "Brooding \nP|Breeding success") + 
+    theme(plot.tag = element_text(size = 16, face = "bold"),
+          axis.title.y = element_text(margin = margin(r = 35)),
+           plot.tag.position = c(0.05, 1),
+          plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm")),
+  cond_plot.diff_trip.days.waal_brooding + 
+    labs(tag = "C") +
     theme(axis.text.y = element_blank(),
           axis.title.y = element_blank(),
           plot.tag = element_text(size = 16, face = "bold")),
-  cond_plot.debt.days.waal_brooding + 
-    labs(tag = "C", y = "Brooding \nP|Breeding success") +
-    theme(axis.title.y = element_text(margin = margin(r = 35)),
-          plot.tag = element_text(size = 16, face = "bold"),
-          plot.tag.position = c(0.05, 1),
-          plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm")),
   ncol = 2,
   nrow = 2,
-  widths = c(1, 0.85, 0.85)# pc: c(1, 0.825, 0.825) laptop =0.85
+  widths = c(1, 0.85)# pc: c(1, 0.825, 0.825) laptop =0.85
 )
 dev.off()
 
@@ -1607,12 +1254,12 @@ dev.off()
 summary(incub_brms.bba); summary(brooding_brms.bba)
 
 bbal_incub.fixef_MS <- bbal_incub.fixef %>%
-  mutate(est_error = paste0(Estimate, " ± ", Est.Error),
+  mutate(est_error = paste0(Estimate, " \u00B1 ", Est.Error),
          cis = paste0('[', `l-95% CI`, ", ", `u-95% CI`, ']')) %>%
   select(est_error, cis, below_zero, above_zero)
 
 bbal_brooding.fixef_MS <- bbal_brooding.fixef %>%
-  mutate(est_error = paste0(Estimate, " ± ", Est.Error),
+  mutate(est_error = paste0(Estimate, " \u00B1 ", Est.Error),
          cis = paste0('[', `l-95% CI`, ", ", `u-95% CI`, ']')) %>%
   select(est_error, cis, below_zero, above_zero)
 

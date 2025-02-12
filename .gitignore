@@ -2,5 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
-Figures
-Data_outputs
+/Figures
+Data_outputs/
+failureRates_results_MKD.html
+failureRates_results_MKD.Rmd
