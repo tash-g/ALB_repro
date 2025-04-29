@@ -44,22 +44,46 @@ select <- dplyr::select
 
 ### Set colour parameters ------------------------------------------------------
 
-incub_col <- "#4682B4"
-brooding_col <- "#FFB347"
-
 ker_col <-  "#156082" 
 ker_col.high <- "#155470"
 ker_col.low <- "#96d0eb"
 
-cro_col <- "#0F9ED5"
-cro_col.low <- "#7bc6e3"
-cro_col.high <- "#0080b3"
-
 bi_col <- "#E97132" 
 bi_col.low <- "#f59b6c"
-bi_col.high <- "#b54b14"
+bi_col.high <- "#E97132" 
 
 
+### Set labels ------------------------------------
+
+# my_labels <- c(
+#   "Within-pair trip<br>variability difference, <b><i>V</i><sub>i</sub></b>",
+#   "Within-pair trip duration<br>difference, <b><i>D</i><sub>i</sub></b>",
+#   "Pair-level median<br>trip duration, <b><i>T</i><sub>i</sub></b>",
+#   "Fasting debt, <b><i>F</i><sub>i</sub></b>"
+# )
+
+my_labels <- c(
+  expression(italic("V"[i])),
+  expression(italic("D"[i])),
+  expression(italic("T"[i])),
+  expression(italic("F"[i]))
+)
+
+
+# Set up variable labeller
+variable_labels <- c(
+  "debt.days:colony" =  expression("Fasting debt,"~italic("F")),
+  "median_trip.days:colony" = expression("Pair-level median trip duration,"~italic("T")),
+  "diff_trip.days:colony" = expression("Within-pair trip duration difference,"~italic("D")),
+  "diff_var.days:colony" = expression("Within-pair trip variability difference,"~italic("V"))
+)
+
+variable_labels2 <- c(
+  "debt.days" =  expression("Fasting debt,"~italic("F")),
+  "median_trip.days" = expression("Pair-level median trip duration,"~italic("T")),
+  "diff_trip.days" = expression("Within-pair trip duration difference,"~italic("D")),
+  "diff_var.days" = expression("Within-pair trip variability difference,"~italic("V"))
+)
 
 ### Define ROPE bounds ------------------------------------------------------
 
@@ -98,206 +122,6 @@ failure_summary <- failure %>%
 t(failure_summary)
 
 
-# SAMPLE SIZES =================================================================
-
-load("Data_inputs/all_pair_behaviour_incub.RData")
-load("Data_inputs/all_pair_behaviour_brooding.RData")
-load("Data_inputs/all_pair_behaviour_incub_withSex.RData")
-load("Data_inputs/all_pair_behaviour_brooding_withSex.RData")
-
-## INCUBATION ##
-
-# Pairs
-tapply(pair_behaviour.incub$pairID, pair_behaviour.incub$speCol, n_distinct)
-tapply(pair_behaviour.incub_withSex$pairID, pair_behaviour.incub_withSex$speCol, n_distinct)
-
-# Observations
-table(pair_behaviour.incub$speCol)
-table(pair_behaviour.incub_withSex$speCol)
-
-# Years
-tapply(pair_behaviour.incub$season, pair_behaviour.incub$speCol, unique)
-tapply(pair_behaviour.incub_withSex$season, pair_behaviour.incub_withSex$speCol, n_distinct)
-
-
-## BROODING ##
-
-# Pairs
-tapply(pair_behaviour.brooding$pairID, pair_behaviour.brooding$speCol, n_distinct)
-tapply(pair_behaviour.brooding_withSex$pairID, pair_behaviour.brooding_withSex$speCol, n_distinct)
-
-# Observations
-table(pair_behaviour.brooding$speCol)
-table(pair_behaviour.brooding_withSex$speCol)
-
-# Years
-tapply(pair_behaviour.brooding$season, pair_behaviour.brooding$speCol, unique)
-tapply(pair_behaviour.brooding_withSex$season, pair_behaviour.brooding_withSex$speCol, n_distinct)
-
-
-# CORRELATIONS -----------------------------------------------------------------
-
-# Colony look-up
-col_lookup <- data.frame(colID = c("bi", "ker", "cro"),
-                         colExp = c("Bird Island", "Kerguelen", "Crozet"))
-
-pair_behaviour.all <- rbind(pair_behaviour.incub %>% mutate(phase = "incubation"), 
-                            pair_behaviour.brooding %>% mutate(phase = "brooding"))
-
-dummy_cols <- unique(pair_behaviour.all$speCol)
-
-for (i in 1:length(dummy_cols)) {
-  
-  which_species <- ifelse(grepl("ba", dummy_cols[i]), "ba", "wa")
-  which_col <- tolower(gsub(which_species, "", dummy_cols[i]))
-  
-  col_name <- col_lookup %>% filter(colID == which_col) %>% pull(colExp)
-  spec_name <- ifelse(which_species == "ba", "BBAL", "WAAL")
-  
-  my_data <- subset(pair_behaviour.all, speCol == dummy_cols[i])
-  correlations_plot <- GGally::ggpairs(my_data[,c(6, 7, 8, 10)], title = paste(spec_name, col_name))
-  
-  
-  png(filename = paste0("Figures/rs_failure/correlations_", dummy_cols[i], ".png"), width = 7, height = 6, units = "in", res = 300)
-  print(correlations_plot)
-  dev.off()
- 
-}
-
-# BEHAVIOURAL VARIABILTIY ------------------------------------------------------
-
-pair_behaviour.all <- rbind(pair_behaviour.incub %>% mutate(phase = "incubation"), 
-                            pair_behaviour.brooding %>% mutate(phase = "brooding"))
-
-dummy_cols <- unique(pair_behaviour.all$speCol)
-
-for (i in 1:length(dummy_cols)) {
-
-  which_species <- ifelse(grepl("ba", dummy_cols[i]), "ba", "wa")
-  which_col <- tolower(gsub(which_species, "", dummy_cols[i]))
-  
-  col_name <- col_lookup %>% filter(colID == which_col) %>% pull(colExp)
-  spec_name <- ifelse(which_species == "ba", "BBAL", "WAAL")
-  
-  my_pairs <- subset(pair_behaviour.all, speCol == dummy_cols[i])
-  all_pairs <- subset(pair_behaviour.all, grepl(which_species, speCol))
-
-  if(which_species == "ba") {
-  
-    maxDebt <- ggplot(aes(x = max_debt.hrs, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$max_debt.hrs), max(all_pairs$max_debt.hrs))
-    sumDebt <- ggplot(aes(x = sum_debt.hrs, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$sum_debt.hrs), max(all_pairs$sum_debt.hrs))
-    medTrip <- ggplot(aes(x = median_trip.days, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$median_trip.days), max(all_pairs$median_trip.days))
-    tripDiff <- ggplot(aes(x = diff_trip.days, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$diff_trip.days), max(all_pairs$diff_trip.days))
-    tripVar <- ggplot(aes(x = pair_var.days, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$pair_var.days), max(all_pairs$pair_var.days))
-    varDiff <- ggplot(aes(x = diff_var.days, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$diff_var.days), max(all_pairs$diff_var.days))
-    
-    myplot <- ggarrange(maxDebt, sumDebt, medTrip, tripDiff, tripVar, varDiff,
-              ncol = 3, nrow = 2)
-    myplot <- annotate_figure(myplot, top = text_grob(paste(spec_name, col_name), 
-                                          face = "bold", size = 14))
-    png(filename = paste0("Figures/rs_failure/", dummy_cols[i], "_behaviours.png"), width = 9, height = 6, units = "in", res = 300)
-    print(myplot)
-    dev.off()
-
-  } else {
-    
-    maxDebt <- ggplot(aes(x = max_debt.hrs, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$max_debt.hrs), max(all_pairs$max_debt.hrs))
-    sumDebt <- ggplot(aes(x = sum_debt.hrs, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$sum_debt.hrs), max(all_pairs$sum_debt.hrs))
-    medTrip <- ggplot(aes(x = median_trip.days, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$median_trip.days), max(all_pairs$median_trip.days))
-    tripDiff <- ggplot(aes(x = diff_trip.days, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$diff_trip.days), max(all_pairs$diff_trip.days))
-    tripVar <- ggplot(aes(x = pair_var.days, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$pair_var.days), max(all_pairs$pair_var.days))
-    varDiff <- ggplot(aes(x = diff_var.days, fill = phase), data = my_pairs) + geom_histogram(alpha = 0.5, col = "black") + 
-      scale_fill_manual(values = c(brooding_col, incub_col)) + theme_classic() + theme(legend.position = "none") +
-      xlim(min(all_pairs$diff_var.days), max(all_pairs$diff_var.days))
-    
-    myplot <- ggarrange(maxDebt, sumDebt, medTrip, tripDiff, tripVar, varDiff,
-                        ncol = 3, nrow = 2)
-    myplot <- annotate_figure(myplot, top = text_grob(paste(spec_name, col_name), 
-                                                      face = "bold", size = 14))
-    png(filename = paste0("Figures/rs_failure/", dummy_cols[i], "_behaviours.png"), width = 9, height = 6, units = "in", res = 300)
-    print(myplot)
-    dev.off()
-    
-  }
-  
-  # Summarise variation
-  col_maxDebt <- rbind("max debt", 
-                        mean(na.omit(my_pairs$max_debt.hrs)),
-                        sd(na.omit(my_pairs$max_debt.hrs)),
-                        range(na.omit(my_pairs$max_debt.hrs))[1],
-                        range(na.omit(my_pairs$max_debt.hrs))[2],
-                        IQR(na.omit(my_pairs$max_debt.hrs)) ) 
-  
-  col_sumDebt <- rbind("summed debt", 
-                       mean(na.omit(my_pairs$sum_debt.hrs)),
-                       sd(na.omit(my_pairs$sum_debt.hrs)),
-                       range(na.omit(my_pairs$sum_debt.hrs))[1],
-                       range(na.omit(my_pairs$sum_debt.hrs))[2],
-                       IQR(na.omit(my_pairs$sum_debt.hrs)) ) 
-  
-  col_medTrip <- rbind("median trip", 
-                       mean(na.omit(my_pairs$median_trip.days)),
-                       sd(na.omit(my_pairs$median_trip.days)),
-                       range(na.omit(my_pairs$median_trip.days))[1],
-                       range(na.omit(my_pairs$median_trip.days))[2],
-                       IQR(na.omit(my_pairs$median_trip.days)) ) 
-  
-  col_medTripDiff <- rbind("median trip diff", 
-                        mean(na.omit(my_pairs$diff_trip.days)),
-                          sd(na.omit(my_pairs$diff_trip.days)),
-                       range(na.omit(my_pairs$diff_trip.days))[1],
-                       range(na.omit(my_pairs$diff_trip.days))[2],
-                         IQR(na.omit(my_pairs$diff_trip.days)) ) 
-  
-  col_tripVar <- rbind("trip variability", 
-                            mean(na.omit(my_pairs$pair_var.days)),
-                              sd(na.omit(my_pairs$pair_var.days)),
-                           range(na.omit(my_pairs$pair_var.days))[1],
-                           range(na.omit(my_pairs$pair_var.days))[2],
-                             IQR(na.omit(my_pairs$pair_var.days)) ) 
-  
-  col_tripVarDiff <- rbind("trip variability diff", 
-                          mean(na.omit(my_pairs$diff_var.days)),
-                            sd(na.omit(my_pairs$diff_var.days)),
-                         range(na.omit(my_pairs$diff_var.days))[1],
-                         range(na.omit(my_pairs$diff_var.days))[2],
-                           IQR(na.omit(my_pairs$diff_var.days)) ) 
-  
-  
-  variables <- cbind(col_maxDebt, col_sumDebt, col_medTrip, 
-                     col_medTripDiff, col_tripVar, col_tripVarDiff)
-  
-  colnames(variables) <- variables[1,]
-  variables <- variables[-1,]
-  variables <- data.frame(variables)
-  variables <- sapply(variables, as.numeric)
-  rownames(variables) <- c("mean", "sd", "min", "max", "IQR")
-  
-  assign(paste0(dummy_cols[i], "_variables"), variables)
- 
-}
 
 # ______________________________ ####
 # ~ * INCUBATION * ~ ###########################################################
@@ -306,6 +130,32 @@ for (i in 1:length(dummy_cols)) {
 # ANALYSIS =====================================================================
     
 load("Data_inputs/all_pair_behaviour_incub.RData")
+
+# Datasets
+behaviour.bba_incub <- pair_behaviour.incub %>% filter(species == "BBA") 
+behaviour.waal_incub <- pair_behaviour.incub %>% filter(species == "WAAL")
+
+#### Examine correlations ---------------------------------------------------------------
+
+# BBA
+GGally::ggpairs(
+  data = behaviour.bba_incub %>%
+    select(colony, debt.days, median_trip.days, diff_trip.days, diff_var.days),
+  columns = 2:5,
+  mapping = ggplot2::aes(colour = colony),
+  title = "Behavioural correlations by colony") +
+  scale_colour_manual(values = c(bi_col, ker_col)) +
+  scale_fill_manual(values = c(bi_col, ker_col))
+
+# WAAL
+GGally::ggpairs(
+  data = behaviour.waal_incub %>%
+    select(colony, debt.days, median_trip.days, diff_trip.days, diff_var.days),
+  columns = 2:5,
+  mapping = ggplot2::aes(colour = colony),
+  title = "Behavioural correlations by colony") +
+  scale_colour_manual(values = c(bi_col, ker_col)) +
+  scale_fill_manual(values = c(bi_col, ker_col))
 
 #### Specify priors ---------------------------------------------------------------
 
@@ -323,19 +173,14 @@ priors.waal <- c( set_prior("normal(-0.5, 1)", class = "b", coef = "debt.days"),
 
 #### Specify models ----------------------------------------------------------------
 
-# Datasets
-behaviour.bba_incub <- pair_behaviour.incub %>% filter(species == "BBA") 
-behaviour.waal_incub <- pair_behaviour.incub %>% filter(species == "WAAL")
-
 # Model structure
 bf.incub <- brms::bf(breeding_outcome.bin ~
                        debt.days * colony +
                        median_trip.days * colony +
                        diff_trip.days * colony +
                        diff_var.days * colony +
-                       (1|season), 
+                       (1|season) + (1|pairID), 
                        family = "bernoulli")
-
 
 ## Fit models
 incub_brms.bba <- brm(bf.incub,
@@ -415,10 +260,6 @@ posteriors.incub_bba %<>%
 
 ##### Plot ----------------------------------------------------------------
 
-my_labels <- c("Trip variability \n(difference)",
-               "Trip duration \n(difference)", "Trip duration \n(median)", 
-               "Pair debt \n(summed)")
-
 posteriors_plot.incub_bba.horizontal <- 
   ggplot() +
   stat_halfeye(data = subset(posteriors.incub_bba, colony == "Bird Island"), 
@@ -433,19 +274,18 @@ posteriors_plot.incub_bba.horizontal <-
                    fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
                                  ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
                height = 0.7) +
-  scale_fill_manual(values = c(
+    scale_fill_manual(values = c(
     "bi_low" = bi_col.low, "bi_high" = bi_col.high,
     "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
   scale_y_discrete(labels = my_labels) +
   geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
    geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
               fill = "lightcyan4", alpha = 0.25) +
-  labs(y = "", x = "Posterior estimate",
-       title = "Black-browed albatrosses") +
+  labs(y = "", 
+       x = expression(logit(italic(p[i])))) +
   theme_bw() +
   theme(text = element_text(size = 16, family = "Calibri"),
         legend.position = "none")
-
 
 
 #### WAAL  ---------------------------------------------------------------------
@@ -503,47 +343,21 @@ posteriors_plot.incub_waal.horizontal <-
                height = 0.7) +
   scale_fill_manual(values = c(
     "bi_low" = bi_col.low, "bi_high" = bi_col.high,
-    "cro_low" = cro_col.low, "cro_high" = cro_col.high ) ) +
+    "cro_low" = ker_col.low, "cro_high" = ker_col.high ) ) +
   scale_y_discrete(labels = my_labels) +
   geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
   geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
             fill = "lightcyan4", alpha = 0.25) +
-  labs(y = "", x = "Posterior estimate",
-       title = "Wandering albatrosses") +
+  labs(y = "", 
+       x = expression(logit(italic(p[i])))) +
   theme_bw() +
   theme(text = element_text(size = 16, family = "Calibri"),
         legend.position = "none")
 
 
-#### COMBINED posterior plots -----------------------------------------------------------
-# png(file = "Figures/posterior_estimates_incub_horizontal.png", 
-#     width = 15, height = 9, units = "in", res = 600)
-# ggarrange(posteriors_plot.incub_bba.horizontal + theme(plot.margin = unit(c(1,0.05,1,3), "cm")), 
-#           posteriors_plot.incub_waal.horizontal + theme(plot.margin = unit(c(1,1,1,0.75), "cm")), 
-#           ncol = 2,
-#           widths = c(1, 0.9))
-# dev.off()
-# 
-# # Laptop
-# png(file = "Figures/posterior_estimates_incub_horizontal2.png", 
-#     width = 15, height = 9, units = "in", res = 100)
-# ggarrange(posteriors_plot.incub_bba.horizontal, posteriors_plot.incub_waal.horizontal,
-#           ncol = 2, widths = c(1, 0.85))
-# dev.off()
-
-
-
 ### Conditional effects  -------------------------------------------------------
 
 effects <- 6:9
-
-# Set up variable labeller
-variable_labels <- c(
-  "debt.days:colony" = "Summed pair debt (days)",
-  "median_trip.days:colony" = "Median trip duration (pair; days)",
-  "diff_trip.days:colony" = "Median trip duration (pair difference; days)",
-  "diff_var.days:colony" = "Trip variability (pair difference; days)"
-)
 
 #### BBAL  ------------------------------------------------------------
 pb <- txtProgressBar(min = 0, max = length(effects), style = 3)
@@ -565,17 +379,12 @@ for (i in 1:length(effects)) {
     geom_point(aes(x = !!sym(var_name.data), y = breeding_outcome.bin, col = colony), data = behaviour.bba_incub) +
     scale_fill_manual(values = c(bi_col, ker_col)) +
     scale_colour_manual(values = c(bi_col, ker_col)) +
-    labs(x = var_label, y = "P|Breeding success") +
+    labs(x = var_label, y = expression("P|Breeding success"~(italic(P[i])))) +
     theme_bw() +
     theme(text = element_text(size = 16, family = "Calibri"),
           legend.position = "none")
   
   assign(paste0("cond_plot.", var_name.data, ".bba_incub"), cond_plot)
-  
-  # png(file = paste0("Figures/rs_failure/conditional_estimate_bba_incub_", var_name.data, ".png"), 
-  #     width = 7, height = 6, units = "in", res = 300)
-  # print(cond_plot)
-  # dev.off()
   
 }
 
@@ -600,19 +409,14 @@ for (i in 1:length(effects)) {
                 data = cond_term.df, alpha = 0.5) +
     geom_line(aes(x = effect1__, y = estimate__, col = colony), data = cond_term.df, linewidth = 1) +
     geom_point(aes(x = !!sym(var_name.data), y = breeding_outcome.bin, col = colony), data = behaviour.waal_incub) +
-    scale_fill_manual(values = c(bi_col, cro_col)) +
-    scale_colour_manual(values = c(bi_col, cro_col)) +
-    labs(x = var_label, y = "P|Breeding success") +
+    scale_fill_manual(values = c(bi_col, ker_col)) +
+    scale_colour_manual(values = c(bi_col, ker_col)) +
+    labs(x = var_label, expression("P|Breeding success"~(italic(P[i])))) +
     theme_bw() +
     theme(text = element_text(size = 16, family = "Calibri"),
           legend.position = "none")
   
   assign(paste0("cond_plot.", var_name.data, ".waal_incub"), cond_plot)
-  
-  # png(file = paste0("Figures/rs_failure/conditional_estimate_waal_incub_", var_name.data, ".png"), 
-  #     width = 7, height = 6, units = "in", res = 300)
-  # print(cond_plot)
-  # dev.off()
   
 }
 
@@ -712,6 +516,34 @@ waal_incub.fixef <- rbind(waal_incub.fixef, cro_fixef)
 
 load("Data_inputs/all_pair_behaviour_brooding.RData")
 
+# Datasets
+behaviour.bba_brooding <- pair_behaviour.brooding %>% filter(species == "BBA") 
+behaviour.waal_brooding <- pair_behaviour.brooding %>% filter(species == "WAAL")
+
+#### Examine correlations ---------------------------------------------------------------
+
+# BBA
+GGally::ggpairs(
+  data = behaviour.bba_brooding %>%
+    select(colony, debt.days, median_trip.days, diff_trip.days, diff_var.days),
+  columns = 2:5,
+  mapping = ggplot2::aes(colour = colony),
+  title = "Behavioural correlations by colony") +
+  scale_colour_manual(values = c(bi_col, ker_col)) +
+  scale_fill_manual(values = c(bi_col, ker_col))
+
+
+# WAAL
+GGally::ggpairs(
+  data = behaviour.waal_brooding %>%
+    select(colony, debt.days, median_trip.days, diff_trip.days, diff_var.days),
+  columns = 2:5,
+  mapping = ggplot2::aes(colour = colony),
+  title = "Behavioural correlations by colony") +
+  scale_colour_manual(values = c(bi_col, ker_col)) +
+  scale_fill_manual(values = c(bi_col, ker_col))
+
+
 #### Specify priors ---------------------------------------------------------------
 
 # BBA 
@@ -728,30 +560,44 @@ priors.waal <- c( set_prior("normal(-0.5, 1)", class = "b", coef = "debt.days"),
 
 #### Specify models ----------------------------------------------------------------
 
-# Datasets
-behaviour.bba_brooding <- pair_behaviour.brooding %>% filter(species == "BBA") #%>% filter(pair_var.days < 4 & max_debt.hrs > 0)
-behaviour.waal_brooding <- pair_behaviour.brooding %>% filter(species == "WAAL")
+# For Kerguelen, I have very limited data, so I am using a partial pooling approach 
 
 # Model structure
-bf.brooding <- brms::bf(breeding_outcome.bin ~
-                       debt.days * colony +
-                       median_trip.days * colony +
-                       diff_trip.days * colony +
-                       diff_var.days * colony +
-                       (1|season), 
-                     family = "bernoulli")
+bf.brooding.partialpool <- brms::bf(
+  breeding_outcome.bin ~ 1 +
+    (1 + debt.days + median_trip.days + diff_trip.days + diff_var.days | colony) +
+    (1 | season),
+  family = bernoulli() )
 
-## Fit models
-brooding_brms.bba <- brm(bf.brooding,
-                            data = behaviour.bba_brooding, 
-                            cores = 4, chains = 4, 
-                            iter = 20000, warmup = 10000, thin = 10,
-                            control = list(adapt_delta = 0.9999, max_treedepth = 14),
-                            prior = priors.bba)
+brooding_brms.bba <- brm(bf.brooding.partialpool,
+                         data = behaviour.bba_brooding, 
+                         cores = 4, chains = 4, 
+                         iter = 2000, warmup = 1000, thin = 10,
+                         control = list(adapt_delta = 0.9999, max_treedepth = 14))
 
 pp_check(brooding_brms.bba)
 save(brooding_brms.bba, file = "Data_outputs/bba_brooding_brms_model.RData")
 
+
+
+##### TESTING
+
+
+
+####
+
+pp_check(brooding_brms.bba)
+save(brooding_brms.bba, file = "Data_outputs/bba_brooding_brms_model.RData")
+
+# WAAL
+
+bf.brooding <- brms::bf(breeding_outcome.bin ~
+                          debt.days * colony +
+                          median_trip.days * colony +
+                          diff_trip.days * colony +
+                          diff_var.days * colony +
+                          (1|season), 
+                        family = "bernoulli")
 
 brooding_brms.waal <- brm(bf.brooding,
                        data = behaviour.waal_brooding, 
@@ -780,46 +626,66 @@ behaviour.waal_brooding <- pair_behaviour.brooding %>% filter(species == "WAAL")
 
 #### BBAL  ---------------------------------------------------------------------
 ##### Estimates ----------------------------------------------------------------
-posterior_samples.brooding_bba <- posterior_samples(brooding_brms.bba)
 
-# Extract posterior samples by colony
-predictors <- colnames(posterior_samples.brooding_bba)[2:6]
-predictors <- predictors[-2]
-interaction_terms <- colnames(posterior_samples.brooding_bba)[7:10]
-posteriors.brooding_bba <- data.frame()
+posterior_samples.brooding_bba <- as_draws_df(brooding_brms_partial.bba)
 
-for (i in 1:length(predictors)) {
-  
-  # Extract the main effect (Bird Island)
-  bird_est <- posterior_samples.brooding_bba[[predictors[i]]]
-  
-  # Extract the interaction effect and add it to the main effect for Kerguelen
-  kerg_est <- bird_est + posterior_samples.brooding_bba[[interaction_terms[i]]]
-  
-  temp_df <- data.frame(
-    variable = predictors[i],
-    value = c(bird_est, kerg_est),
-    colony = rep(c("Bird Island", "Kerguelen"), each = length(bird_est))
-  )
-  
-  posteriors.brooding_bba <- rbind(posteriors.brooding_bba, temp_df)
-  
-}
+# Random effects for each colony and predictor
+colony_effects <- posterior_samples.brooding_bba[, grep("^r_", names(posterior_samples.brooding_bba))]
+posteriors.brooding_bba <- reshape2::melt(colony_effects) %>% filter(!grepl("Intercept", variable)) 
 
-## Relevel factors
+posteriors.brooding_bba %<>%
+  mutate(colony = gsub("r_colony\\[([^,]+),.*\\]", "\\1", variable),  
+    effect = gsub("r_colony\\[[^,]+,(.*)\\]", "\\1", variable)) %>%
+  select(-variable) %>%
+  rename(variable = effect) %>%
+  relocate(variable, value, colony) %>%
+  mutate(colony = ifelse(colony == "birdisland", "Bird Island", "Kerguelen"))
+
+# Relevel factors
 posteriors.brooding_bba %<>%
   mutate(variable = fct_rev(fct_relevel(variable, 
-                                        c("b_debt.days", 
-                                          "b_median_trip.days", 
-                                          "b_diff_trip.days", 
-                                          "b_diff_var.days"))))
+                                        c("debt.days", 
+                                          "median_trip.days", 
+                                          "diff_trip.days", 
+                                          "diff_var.days"))))
+
+# posterior_samples.brooding_bba <- posterior_samples(brooding_brms.bba)
+# 
+# # Extract posterior samples by colony
+# predictors <- colnames(posterior_samples.brooding_bba)[2:6]
+# predictors <- predictors[-2]
+# interaction_terms <- colnames(posterior_samples.brooding_bba)[7:10]
+# posteriors.brooding_bba <- data.frame()
+# 
+# for (i in 1:length(predictors)) {
+#   
+#   # Extract the main effect (Bird Island)
+#   bird_est <- posterior_samples.brooding_bba[[predictors[i]]]
+#   
+#   # Extract the interaction effect and add it to the main effect for Kerguelen
+#   kerg_est <- bird_est + posterior_samples.brooding_bba[[interaction_terms[i]]]
+#   
+#   temp_df <- data.frame(
+#     variable = predictors[i],
+#     value = c(bird_est, kerg_est),
+#     colony = rep(c("Bird Island", "Kerguelen"), each = length(bird_est))
+#   )
+#   
+#   posteriors.brooding_bba <- rbind(posteriors.brooding_bba, temp_df)
+#   
+# }
+# 
+# ## Relevel factors
+# posteriors.brooding_bba %<>%
+#   mutate(variable = fct_rev(fct_relevel(variable, 
+#                                         c("b_debt.days", 
+#                                           "b_median_trip.days", 
+#                                           "b_diff_trip.days", 
+#                                           "b_diff_var.days"))))
 
 
-##### Plots ----------------------------------------------------------------
+##### Plot ----------------------------------------------------------------
 
-my_labels <- c("Trip variability \n(difference)",
-               "Trip duration \n(difference)", "Trip duration \n(median)", 
-               "Pair debt \n(summed)")
 
 posteriors_plot.brooding_bba.horizontal <- 
   ggplot() +
@@ -842,11 +708,39 @@ posteriors_plot.brooding_bba.horizontal <-
   geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
   geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
             fill = "lightcyan4", alpha = 0.25) +
-  labs(y = "", x = "Posterior estimate",
-       title = "Black-browed albatrosses") +
+  labs(y = "", 
+       x = expression(logit(italic(p[i])))) +
   theme_bw() +
   theme(text = element_text(size = 16, family = "Calibri"),
         legend.position = "none")
+
+
+# posteriors_plot.brooding_bba.horizontal <- 
+#   ggplot() +
+#   stat_halfeye(data = subset(posteriors.brooding_bba, colony == "Bird Island"), 
+#                side = "bottom", 
+#                aes(x = value, y = variable,
+#                    fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+#                                  ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+#                height = 0.7) +
+#   stat_halfeye(data = subset(posteriors.brooding_bba, colony == "Kerguelen"), 
+#                side = "top", 
+#                aes(x = value, y = variable,
+#                    fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+#                                  ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+#                height = 0.7) +
+#   scale_fill_manual(values = c(
+#     "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+#     "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+#   scale_y_discrete(labels = my_labels) +
+#   geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+#   geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+#             fill = "lightcyan4", alpha = 0.25) +
+#   labs(y = "", 
+#        x = expression(logit(italic(p[i])))) +
+#   theme_bw() +
+#   theme(text = element_text(size = 16, family = "Calibri"),
+#         legend.position = "none")
 
 
 
@@ -906,48 +800,94 @@ posteriors_plot.brooding_waal.horizontal <-
                height = 0.7) +
   scale_fill_manual(values = c(
     "bi_low" = bi_col.low, "bi_high" = bi_col.high,
-    "cro_low" = cro_col.low, "cro_high" = cro_col.high ) ) +
+    "cro_low" = ker_col.low, "cro_high" = ker_col.high ) ) +
   scale_y_discrete(labels = my_labels) +
   geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
   geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
             fill = "lightcyan4", alpha = 0.25) +
-  labs(y = "", x = "Posterior estimate",
-       title = "Wandering albatrosses") +
+  labs(y = "", 
+       x = expression(logit(italic(p[i])))) +
   theme_bw() +
   theme(text = element_text(size = 16, family = "Calibri"),
         legend.position = "none")
 
 
+## Conditional effects  --------------------------------------------------------
 
-### Combined posterior plots -----------------------------------------------------------
+#### BBAL  ---------------------------------------------------------------------
 
-# png(file = "Figures/rs_failure/posterior_estimates_brooding_horizontal.png", 
-#     width = 15, height = 9, units = "in", res = 600)
-# ggarrange(posteriors_plot.brooding_bba.horizontal + theme(plot.margin = unit(c(1,0.05,1,3), "cm")), 
-#           posteriors_plot.brooding_waal.horizontal + theme(plot.margin = unit(c(1,1,1,0.75), "cm")), 
-#           ncol = 2,
-#           widths = c(1, 0.9))
-# dev.off()
+pb <- txtProgressBar(min = 0, max = length(effects), style = 3)
 
-# Laptop #
-# png(file = "Figures/rs_failure/posterior_estimates_brooding_horizontal.png", width = 15, height = 9, units = "in", res = 600)
-# ggarrange(posteriors_plot.brooding_bba.horizontal, posteriors_plot.brooding_waal.horizontal, ncol = 2,
-#           widths = c(1, 0.85))
-# dev.off()
+effects <- c("debt.days", "median_trip.days", "diff_trip.days", "diff_var.days")
 
+for (i in 1:length(effects)) {
+  
+  setTxtProgressBar(pb, i)
+  
+  var_name <- effects[i]
+  var_label <- variable_labels2[var_name]
+ 
+  # Make the prediction DF
+  fixed_values <- list(
+    colony = c("kerguelen", "birdisland"),
+    season = NA)
+  
+  # Dynamically set the values for the non-varying variables (set to 0, unless it's the one being predicted)
+  for (fixed_var in c("debt.days", "diff_trip.days", "diff_var.days", "median_trip.days")) {
+    if (fixed_var != var_name) {
+      fixed_values[[fixed_var]] <- 0  # Set other variables to 0 if they are not the one being predicted
+    } else {
+      # If the current variable is the one being predicted, leave it out of the fixed values
+      fixed_values[[fixed_var]] <- NULL
+    }
+  }
+  
+  ## Create a sequence for the variable currently being examined
+  effect_seq <- seq(
+    min(behaviour.bba_brooding[[var_name]], na.rm = TRUE),
+    max(behaviour.bba_brooding[[var_name]], na.rm = TRUE),
+    length.out = 100
+  )
+  
+  ## Create a list of all variables to pass to expand.grid
+  grid_list <- list(fixed_values)[[1]]
+  
+  # Overwrite the current variable with its actual sequence
+  grid_list[[var_name]] <- effect_seq
+  
+  # Generate new data
+  newdat <- expand.grid(grid_list) %>% arrange(colony)
+  
+  # Predict from model, including random effects
+  preds <- fitted(
+    brooding_brms_partial.bba,
+    newdata = newdat,
+    re_formula = NULL,    
+    summary = TRUE,       
+    scale = "response")
+  
+  # Combine predictions with the new data
+  newdat$pred <- preds[, "Estimate"]
+  newdat$lower <- preds[, "Q2.5"]
+  newdat$upper <- preds[, "Q97.5"]
+  
+  cond_plot <- ggplot() +
+    # geom_ribbon(aes(x = diff_trip.days, y = pred, ymin = lower, ymax = upper, fill = colony), 
+    #             data = newdat, alpha = 0.5) +
+    geom_line(aes(x = diff_trip.days, y = pred, colour = colony), data = newdat, linewidth = 1) +
+    geom_point(aes(x = !!sym(var_name), y = breeding_outcome.bin, col = colony), data = behaviour.bba_brooding) +
+    scale_fill_manual(values = c(ker_col, bi_col)) +
+    scale_colour_manual(values = c(ker_col, bi_col)) +
+    labs(x = var_label, y = expression("P|Breeding success"~(italic(P[i])))) +
+    theme_bw() +
+    theme(text = element_text(size = 16, family = "Calibri"),
+          legend.position = "none")
+  
 
-
-## Conditional effects  -------------------------------------------------------
+}
 
 effects <- 6:9
 
-# Set up variable labeller
-variable_labels <- c(
-  "debt.days:colony" = "Summed pair debt (days)",
-  "median_trip.days:colony" = "Median trip duration (pair; days)",
-  "diff_trip.days:colony" = "Median trip duration (pair difference; days)",
-  "diff_var.days:colony" = "Trip variability (pair difference; days)"
-)
 
 ## BBA ##
 pb <- txtProgressBar(min = 0, max = length(effects), style = 3)
@@ -969,17 +909,12 @@ for (i in 1:length(effects)) {
     geom_point(aes(x = !!sym(var_name.data), y = breeding_outcome.bin, col = colony), data = behaviour.bba_brooding) +
     scale_fill_manual(values = c(bi_col, ker_col)) +
     scale_colour_manual(values = c(bi_col, ker_col)) +
-    labs(x = var_label, y = "P|Breeding success") +
+    labs(x = var_label, y = expression("P|Breeding success"~(italic(P[i])))) +
     theme_bw() +
     theme(text = element_text(size = 16, family = "Calibri"),
           legend.position = "none")
   
   assign(paste0("cond_plot.", var_name.data, ".bba_brooding"), cond_plot)
-  
-  # png(file = paste0("Figures/rs_failure/conditional_estimate_bba_brooding_", var_name.data, ".png"), 
-  #     width = 7, height = 6, units = "in", res = 300)
-  # print(cond_plot)
-  # dev.off()
   
 }
 
@@ -1004,20 +939,15 @@ for (i in 1:length(effects)) {
                 data = cond_term.df, alpha = 0.5) +
     geom_line(aes(x = effect1__, y = estimate__, col = colony), data = cond_term.df, linewidth = 1) +
     geom_point(aes(x = !!sym(var_name.data), y = breeding_outcome.bin, col = colony), data = behaviour.waal_brooding) +
-    scale_fill_manual(values = c(bi_col, cro_col)) +
-    scale_colour_manual(values = c(bi_col, cro_col)) +
-    labs(x = var_label, y = "P|Breeding success") +
+    scale_fill_manual(values = c(bi_col, ker_col)) +
+    scale_colour_manual(values = c(bi_col, ker_col)) +
+    labs(x = var_label, y = expression("P|Breeding success"~(italic(P[i])))) +
     theme_bw() +
     theme(text = element_text(size = 16, family = "Calibri"),
           legend.position = "none")
   
   assign(paste0("cond_plot.", var_name.data, ".waal_brooding"), cond_plot)
-  
-  # png(file = paste0("Figures/rs_failure/conditional_estimate_waal_brooding_", var_name.data, ".png"), 
-  #     width = 7, height = 6, units = "in", res = 300)
-  # print(cond_plot)
-  # dev.off()
-  
+ 
 }
 
 close(pb)
@@ -1035,6 +965,20 @@ load("Data_outputs/waal_brooding_brms_model.RData")
 
 summary(brooding_brms.bba)
 posterior_samples.brooding_bba <- posterior_samples(brooding_brms.bba)
+
+
+### TEMP
+
+## Get effects ##
+
+mean(post[["r_colony[kerguelen,median_trip.days]"]])
+exp(mean(post[["r_colony[kerguelen,median_trip.days]"]]))
+exp(quantile(post[["r_colony[kerguelen,median_trip.days]"]]))
+
+exp(mean(post[["r_colony[birdisland,median_trip.days]"]]))
+exp(quantile(post[["r_colony[birdisland,median_trip.days]"]]))
+
+###
 
 ##### Overall summary table ------------------------------
 
@@ -1111,21 +1055,24 @@ waal_brooding.fixef <- rbind(waal_brooding.fixef, cro_fixef)
 # Add albatross silhouettes
 posteriors_plot.incub_bba.horizontal2<- ggdraw() +
   draw_plot(posteriors_plot.incub_bba.horizontal + labs(y = "Incubation") +
-              #xlim(-1.5, 1.5) +
-              theme(axis.title.y = element_text(margin = margin(r = 90)),
+              annotate("text", x = 0.9, y = 4.5, label = "Increases success") +
+              annotate("text", x = -0.6, y = 4.5, label = "Decreases success") +
+                theme(axis.title.y = element_text(margin = margin(r = 20)),
                     axis.title.x = element_blank(),
                     text = element_text(size = 16, family = "Calibri"))) +
   draw_image(file.path("Figures/bba_standing_silhouette.png"),
-             scale = 0.15, x = 0.39, y = 0.28) 
+             scale = 0.25, x = 0.35, y = -0.28) 
   
 
 posteriors_plot.incub_waal.horizontal2 <- ggdraw() +
   draw_plot(posteriors_plot.incub_waal.horizontal +
+              annotate("text", x = 0.5, y = 4.5, label = "Increases success") +
+              annotate("text", x = -0.4, y = 4.5, label = "Decreases success") +
               theme(axis.title.x = element_blank(),
                     axis.text.y = element_blank(),
                     text = element_text(size = 16, family = "Calibri"))) +
   draw_image(file.path("Figures/waal_standing_silhouette.png"),
-             scale = 0.2, x = 0.38, y = 0.32)
+             scale = 0.25, x = 0.38, y = -0.28)
 
 
 png(file = "Figures/FIGURE1.png", width = 10, height = 10, units = "in", res = 100)
@@ -1133,48 +1080,15 @@ ggarrange(posteriors_plot.incub_bba.horizontal2,
           posteriors_plot.incub_waal.horizontal2,
           posteriors_plot.brooding_bba.horizontal + 
             labs(y = "Brooding") + 
-            theme(axis.title.y = element_text(margin = margin(r = 90)),
+            theme(axis.title.y = element_text(margin = margin(r = 20)),
                   plot.title = element_blank()),
           posteriors_plot.brooding_waal.horizontal + 
             theme(plot.title = element_blank(),
                   axis.text.y = element_blank()),
           ncol = 2,
           nrow = 2,
-          widths = c(1, 0.8))
+          widths = c(1, 0.95))
 dev.off()
-
-
-# Laptop #
-# posteriors_plot.incub_bba.horizontal2 <- ggdraw() +
-#   draw_plot(posteriors_plot.incub_bba.horizontal + labs(y = "Incubation") +
-#               theme(axis.title.y = element_text(margin = margin(r = 10)),
-#                     axis.title.x = element_blank(),
-#                     text = element_text(size = 16, family = "Calibri"))) +
-#   draw_image(file.path("Figures/rs_failure/bba_standing_silhouette.png"),
-#              scale = 0.15, x = 0.39, y = 0.28) 
-# 
-# 
-# posteriors_plot.incub_waal.horizontal2 <- ggdraw() +
-#   draw_plot(posteriors_plot.incub_waal.horizontal +
-#               theme(axis.title.x = element_blank(),
-#                     text = element_text(size = 16, family = "Calibri"))) +
-#   draw_image(file.path("Figures/rs_failure/waal_standing_silhouette.png"),
-#              scale = 0.2, x = 0.38, y = 0.32)
-# 
-# 
-# png(file = "Figures/rs_failure/FIGURE1.png", width = 10, height = 10, units = "in", res = 100)
-# ggarrange(posteriors_plot.incub_bba.horizontal2,
-#           posteriors_plot.incub_waal.horizontal2,
-#           posteriors_plot.brooding_bba.horizontal + 
-#             labs(y = "Brooding") + 
-#             theme(axis.title.y = element_text(margin = margin(r = 10)),
-#                   plot.title = element_blank()),
-#           posteriors_plot.brooding_waal.horizontal + 
-#             theme(plot.title = element_blank()),
-#           ncol = 2,
-#           nrow = 2,
-#           widths = c(1, 0.8))
-# dev.off()
 
 
 # * FIGURE 2 * BBAL CONDITIONAL PLOTS ==========================================
@@ -1188,7 +1102,7 @@ cond_plot.median_trip.days.bba_incub2 <- ggdraw() +
                     plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm"),
                     text = element_text(size = 16, family = "Calibri"))) +
   draw_image(file.path("Figures/bba_standing_silhouette.png"),
-             scale = 0.15, x = 0.39, y = -0.3) 
+             scale = 0.25, x = 0.32, y = -0.23) 
 
 png(file = "Figures/FIGURE2.png", width = 10, height = 10, units = "in", res = 300)
 ggarrange(
@@ -1205,7 +1119,8 @@ ggarrange(
     labs(tag = "C") +
     theme(axis.text.y = element_blank(),
           axis.title.y = element_blank(),
-          plot.tag = element_text(size = 16, face = "bold")),
+          plot.tag = element_text(size = 16, face = "bold"),
+          plot.margin = unit(c(0.3, 0.2, 0.1, 0.5), "cm")),
   ncol = 2,
   nrow = 2,
   widths = c(1, 0.85)
@@ -1225,7 +1140,7 @@ cond_plot.diff_var.days.waal_incub2 <- ggdraw() +
                     plot.margin = unit(c(0.6, 0.2, 0.1, 0.5), "cm"),
                     text = element_text(size = 16, family = "Calibri"))) +
   draw_image(file.path("Figures/waal_standing_silhouette.png"),
-             scale = 0.2, x = -0.15, y = -0.22)
+             scale = 0.3, x = -0.12, y = -0.18)
 
 
 png(file = "Figures/FIGURE3.png", width = 10, height = 10, units = "in", res = 300)
@@ -1242,10 +1157,11 @@ ggarrange(
     labs(tag = "C") +
     theme(axis.text.y = element_blank(),
           axis.title.y = element_blank(),
-          plot.tag = element_text(size = 16, face = "bold")),
+          plot.tag = element_text(size = 16, face = "bold"),
+          plot.margin = unit(c(0.3, 0.2, 0.1, 0.5), "cm")),
   ncol = 2,
   nrow = 2,
-  widths = c(1, 0.85)# pc: c(1, 0.825, 0.825) laptop =0.85
+  widths = c(1, 0.85)
 )
 dev.off()
 
