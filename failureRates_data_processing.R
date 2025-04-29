@@ -93,6 +93,16 @@ waCro_trips <- subset(waCro_trips, !is.na(rs) & rs != "UNKNOWN" & rs != "NON-BRE
 waCro_trips.sex <- subset(waCro_trips, !is.na(sex))
 
 
+
+# How many breeding dates were estimated? ---------------------------------
+
+all_trips <- rbind(baBI_trips %>% select(c(pairID, lay_code, hatch_code)), 
+                   baKer_trips %>% select(c(pairID, lay_code, hatch_code)),
+                   waBI_trips %>% select(c(pairID, lay_code, hatch_code)), 
+                   waCro_trips %>% select(c(pairID, lay_code, hatch_code)))
+
+(nrow(subset(all_trips, lay_code == "EST" & hatch_code == "EST"))/nrow(all_trips))*100
+
 # ______________________________ ####
 # DATA PROCESSING --------------------------------------------------------------
 
@@ -215,9 +225,6 @@ save(pair_behaviour.incub_withSex, file = "Data_inputs/all_pair_behaviour_incub_
 
 
 ### Brooding ------------------------------------------------------------------
-
-## lots of NA values for differences at Kerguelen?
-
 
 for (i in 1:length(species)) {
   
