@@ -21,7 +21,7 @@ source("ALB_FOR_functions.R")
 
 # Define the packages
 packages <- c("dplyr", "magrittr", "ggplot2", "brms", "tidyverse", "tidybayes",
-              "ggpubr", "extrafont", "cowplot")
+              "ggpubr", "extrafont", "cowplot", "performance")
 
 # Install packages not yet installed - change lib to library path
 # installed_packages <- packages %in% rownames(installed.packages())
@@ -78,12 +78,6 @@ variable_labels <- c(
   "diff_var.days:colony" = expression("Within-pair trip variability difference,"~italic("V"))
 )
 
-variable_labels2 <- c(
-  "debt.days" =  expression("Fasting debt,"~italic("F")),
-  "median_trip.days" = expression("Pair-level median trip duration,"~italic("T")),
-  "diff_trip.days" = expression("Within-pair trip duration difference,"~italic("D")),
-  "diff_var.days" = expression("Within-pair trip variability difference,"~italic("V"))
-)
 
 ### Define ROPE bounds ------------------------------------------------------
 
@@ -179,7 +173,7 @@ bf.incub <- brms::bf(breeding_outcome.bin ~
                        median_trip.days * colony +
                        diff_trip.days * colony +
                        diff_var.days * colony +
-                       (1|season) + (1|pairID), 
+                       (1|season), 
                        family = "bernoulli")
 
 ## Fit models
@@ -193,6 +187,9 @@ incub_brms.bba <- brm(bf.incub,
 summary(incub_brms.bba)
 pp_check(incub_brms.bba, ndraw = 50)
 save(incub_brms.bba, file = "Data_outputs/bba_incub_brms_model.RData")
+
+
+
 
 incub_brms.waal <- brm(bf.incub,
                       data = behaviour.waal_incub, 
@@ -440,6 +437,7 @@ behaviour.waal_incub <- pair_behaviour.incub %>% filter(species == "WAAL")
 summary(incub_brms.bba)
 posterior_samples.incub_bba <- posterior_samples(incub_brms.bba)
 
+
 ##### Overall summary table ------------------------------
 
 bbal_incub.fixef <- round(summary(incub_brms.bba)$fixed, digits = 2)
@@ -560,37 +558,6 @@ priors.waal <- c( set_prior("normal(-0.5, 1)", class = "b", coef = "debt.days"),
 
 #### Specify models ----------------------------------------------------------------
 
-# For Kerguelen, I have very limited data, so I am using a partial pooling approach 
-
-# Model structure
-bf.brooding.partialpool <- brms::bf(
-  breeding_outcome.bin ~ 1 +
-    (1 + debt.days + median_trip.days + diff_trip.days + diff_var.days | colony) +
-    (1 | season),
-  family = bernoulli() )
-
-brooding_brms.bba <- brm(bf.brooding.partialpool,
-                         data = behaviour.bba_brooding, 
-                         cores = 4, chains = 4, 
-                         iter = 2000, warmup = 1000, thin = 10,
-                         control = list(adapt_delta = 0.9999, max_treedepth = 14))
-
-pp_check(brooding_brms.bba)
-save(brooding_brms.bba, file = "Data_outputs/bba_brooding_brms_model.RData")
-
-
-
-##### TESTING
-
-
-
-####
-
-pp_check(brooding_brms.bba)
-save(brooding_brms.bba, file = "Data_outputs/bba_brooding_brms_model.RData")
-
-# WAAL
-
 bf.brooding <- brms::bf(breeding_outcome.bin ~
                           debt.days * colony +
                           median_trip.days * colony +
@@ -598,6 +565,22 @@ bf.brooding <- brms::bf(breeding_outcome.bin ~
                           diff_var.days * colony +
                           (1|season), 
                         family = "bernoulli")
+
+# Model structure
+
+brooding_brms.bba <- brm(bf.brooding,
+                         data = behaviour.bba_brooding, 
+                         cores = 4, chains = 4, 
+                         iter = 20000, warmup = 10000, thin = 10,
+                         control = list(adapt_delta = 0.9999, max_treedepth = 14))
+
+pp_check(brooding_brms.bba)
+save(brooding_brms.bba, file = "Data_outputs/bba_brooding_brms_model.RData")
+
+
+# WAAL
+
+
 
 brooding_brms.waal <- brm(bf.brooding,
                        data = behaviour.waal_brooding, 
@@ -627,61 +610,39 @@ behaviour.waal_brooding <- pair_behaviour.brooding %>% filter(species == "WAAL")
 #### BBAL  ---------------------------------------------------------------------
 ##### Estimates ----------------------------------------------------------------
 
-posterior_samples.brooding_bba <- as_draws_df(brooding_brms_partial.bba)
+posterior_samples.brooding_bba <- posterior_samples(brooding_brms.bba)
 
-# Random effects for each colony and predictor
-colony_effects <- posterior_samples.brooding_bba[, grep("^r_", names(posterior_samples.brooding_bba))]
-posteriors.brooding_bba <- reshape2::melt(colony_effects) %>% filter(!grepl("Intercept", variable)) 
+# Extract posterior samples by colony
+predictors <- colnames(posterior_samples.brooding_bba)[2:6]
+predictors <- predictors[-2]
+interaction_terms <- colnames(posterior_samples.brooding_bba)[7:10]
+posteriors.brooding_bba <- data.frame()
 
+for (i in 1:length(predictors)) {
+
+  # Extract the main effect (Bird Island)
+  bird_est <- posterior_samples.brooding_bba[[predictors[i]]]
+
+  # Extract the interaction effect and add it to the main effect for Kerguelen
+  kerg_est <- bird_est + posterior_samples.brooding_bba[[interaction_terms[i]]]
+
+  temp_df <- data.frame(
+    variable = predictors[i],
+    value = c(bird_est, kerg_est),
+    colony = rep(c("Bird Island", "Kerguelen"), each = length(bird_est))
+  )
+
+  posteriors.brooding_bba <- rbind(posteriors.brooding_bba, temp_df)
+
+}
+
+## Relevel factors
 posteriors.brooding_bba %<>%
-  mutate(colony = gsub("r_colony\\[([^,]+),.*\\]", "\\1", variable),  
-    effect = gsub("r_colony\\[[^,]+,(.*)\\]", "\\1", variable)) %>%
-  select(-variable) %>%
-  rename(variable = effect) %>%
-  relocate(variable, value, colony) %>%
-  mutate(colony = ifelse(colony == "birdisland", "Bird Island", "Kerguelen"))
-
-# Relevel factors
-posteriors.brooding_bba %<>%
-  mutate(variable = fct_rev(fct_relevel(variable, 
-                                        c("debt.days", 
-                                          "median_trip.days", 
-                                          "diff_trip.days", 
-                                          "diff_var.days"))))
-
-# posterior_samples.brooding_bba <- posterior_samples(brooding_brms.bba)
-# 
-# # Extract posterior samples by colony
-# predictors <- colnames(posterior_samples.brooding_bba)[2:6]
-# predictors <- predictors[-2]
-# interaction_terms <- colnames(posterior_samples.brooding_bba)[7:10]
-# posteriors.brooding_bba <- data.frame()
-# 
-# for (i in 1:length(predictors)) {
-#   
-#   # Extract the main effect (Bird Island)
-#   bird_est <- posterior_samples.brooding_bba[[predictors[i]]]
-#   
-#   # Extract the interaction effect and add it to the main effect for Kerguelen
-#   kerg_est <- bird_est + posterior_samples.brooding_bba[[interaction_terms[i]]]
-#   
-#   temp_df <- data.frame(
-#     variable = predictors[i],
-#     value = c(bird_est, kerg_est),
-#     colony = rep(c("Bird Island", "Kerguelen"), each = length(bird_est))
-#   )
-#   
-#   posteriors.brooding_bba <- rbind(posteriors.brooding_bba, temp_df)
-#   
-# }
-# 
-# ## Relevel factors
-# posteriors.brooding_bba %<>%
-#   mutate(variable = fct_rev(fct_relevel(variable, 
-#                                         c("b_debt.days", 
-#                                           "b_median_trip.days", 
-#                                           "b_diff_trip.days", 
-#                                           "b_diff_var.days"))))
+  mutate(variable = fct_rev(fct_relevel(variable,
+                                        c("b_debt.days",
+                                          "b_median_trip.days",
+                                          "b_diff_trip.days",
+                                          "b_diff_var.days"))))
 
 
 ##### Plot ----------------------------------------------------------------
@@ -816,80 +777,8 @@ posteriors_plot.brooding_waal.horizontal <-
 
 #### BBAL  ---------------------------------------------------------------------
 
-pb <- txtProgressBar(min = 0, max = length(effects), style = 3)
-
-effects <- c("debt.days", "median_trip.days", "diff_trip.days", "diff_var.days")
-
-for (i in 1:length(effects)) {
-  
-  setTxtProgressBar(pb, i)
-  
-  var_name <- effects[i]
-  var_label <- variable_labels2[var_name]
- 
-  # Make the prediction DF
-  fixed_values <- list(
-    colony = c("kerguelen", "birdisland"),
-    season = NA)
-  
-  # Dynamically set the values for the non-varying variables (set to 0, unless it's the one being predicted)
-  for (fixed_var in c("debt.days", "diff_trip.days", "diff_var.days", "median_trip.days")) {
-    if (fixed_var != var_name) {
-      fixed_values[[fixed_var]] <- 0  # Set other variables to 0 if they are not the one being predicted
-    } else {
-      # If the current variable is the one being predicted, leave it out of the fixed values
-      fixed_values[[fixed_var]] <- NULL
-    }
-  }
-  
-  ## Create a sequence for the variable currently being examined
-  effect_seq <- seq(
-    min(behaviour.bba_brooding[[var_name]], na.rm = TRUE),
-    max(behaviour.bba_brooding[[var_name]], na.rm = TRUE),
-    length.out = 100
-  )
-  
-  ## Create a list of all variables to pass to expand.grid
-  grid_list <- list(fixed_values)[[1]]
-  
-  # Overwrite the current variable with its actual sequence
-  grid_list[[var_name]] <- effect_seq
-  
-  # Generate new data
-  newdat <- expand.grid(grid_list) %>% arrange(colony)
-  
-  # Predict from model, including random effects
-  preds <- fitted(
-    brooding_brms_partial.bba,
-    newdata = newdat,
-    re_formula = NULL,    
-    summary = TRUE,       
-    scale = "response")
-  
-  # Combine predictions with the new data
-  newdat$pred <- preds[, "Estimate"]
-  newdat$lower <- preds[, "Q2.5"]
-  newdat$upper <- preds[, "Q97.5"]
-  
-  cond_plot <- ggplot() +
-    # geom_ribbon(aes(x = diff_trip.days, y = pred, ymin = lower, ymax = upper, fill = colony), 
-    #             data = newdat, alpha = 0.5) +
-    geom_line(aes(x = diff_trip.days, y = pred, colour = colony), data = newdat, linewidth = 1) +
-    geom_point(aes(x = !!sym(var_name), y = breeding_outcome.bin, col = colony), data = behaviour.bba_brooding) +
-    scale_fill_manual(values = c(ker_col, bi_col)) +
-    scale_colour_manual(values = c(ker_col, bi_col)) +
-    labs(x = var_label, y = expression("P|Breeding success"~(italic(P[i])))) +
-    theme_bw() +
-    theme(text = element_text(size = 16, family = "Calibri"),
-          legend.position = "none")
-  
-
-}
-
 effects <- 6:9
 
-
-## BBA ##
 pb <- txtProgressBar(min = 0, max = length(effects), style = 3)
 
 for (i in 1:length(effects)) {
@@ -921,7 +810,7 @@ for (i in 1:length(effects)) {
 close(pb)
 
 
-## WAAL ##
+### WAAL ----------
 pb <- txtProgressBar(min = 0, max = length(effects), style = 3)
 
 for (i in 1:length(effects)) {
@@ -965,20 +854,48 @@ load("Data_outputs/waal_brooding_brms_model.RData")
 
 summary(brooding_brms.bba)
 posterior_samples.brooding_bba <- posterior_samples(brooding_brms.bba)
+#posterior_samples.brooding_bba <- as_draws_df(brooding_brms.bba)
 
+#### testing
+newdata <- data.frame(
+  diff_trip.days = seq(0, 2, by = 0.25),
+  colony = "kerguelen",
+  phase = "brooding",
+  debt.days = mean(behaviour.bba_brooding$debt.days, na.rm = TRUE),
+  median_trip.days = mean(behaviour.bba_brooding$median_trip.days, na.rm = TRUE),
+  diff_var.days = mean(behaviour.bba_brooding$diff_var.days, na.rm = TRUE),
+  # include any other predictors as needed
+  season = NA  # if season is a random effect
+)
 
-### TEMP
+pp <- posterior_epred(brooding_brms.bba, newdata = newdata, allow_new_levels = TRUE)
+apply(pp, 2, function(x) c(mean = mean(x), quantile(x, probs = c(0.025, 0.975))))
 
-## Get effects ##
+summary_stats <- apply(pp, 2, function(x) c(mean = mean(x), quantile(x, probs = c(0.025, 0.975))))
 
-mean(post[["r_colony[kerguelen,median_trip.days]"]])
-exp(mean(post[["r_colony[kerguelen,median_trip.days]"]]))
-exp(quantile(post[["r_colony[kerguelen,median_trip.days]"]]))
+# Convert to data frame
+summary_df <- as.data.frame(t(summary_stats))
+colnames(summary_df) <- c("mean", "lower", "upper")
 
-exp(mean(post[["r_colony[birdisland,median_trip.days]"]]))
-exp(quantile(post[["r_colony[birdisland,median_trip.days]"]]))
+# Create a vector of median trip duration values (x-axis)
+# Replace with your actual predictor values if you used something specific
+diff_trip.days <- seq(0, 2, by = 0.25)
 
-###
+# Combine into plotting data frame
+plot_df <- cbind.data.frame(diff_trip.days, summary_df)
+
+ggplot(plot_df, aes(x = diff_trip.days, y = mean)) +
+  geom_line(color = "steelblue", size = 1) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), fill = "lightblue", alpha = 0.4) +
+  labs(
+    x = "Within-pair trip duration difference",
+    y = "Predicted Breeding Success",
+    title = "Predicted Breeding Success vs. Median Trip Duration"
+  ) +
+  theme_minimal()
+
+####
+
 
 ##### Overall summary table ------------------------------
 
@@ -1050,6 +967,20 @@ waal_brooding.fixef <- rbind(waal_brooding.fixef, cro_fixef)
 
 
 # ______________________________ ####
+
+# Outputs ----------------------------------------------------------------------
+
+load("Data_inputs/all_pair_behaviour_incub.RData")
+
+load("Data_outputs/bba_incub_brms_model.RData")
+load("Data_outputs/waal_incub_brms_model.RData")
+
+load("Data_inputs/all_pair_behaviour_brooding.RData")
+
+load("Data_outputs/bba_brooding_brms_model.RData")
+load("Data_outputs/waal_brooding_brms_model.RData")
+
+
 # * FIGURE 1 * COMBINED POSTERIOR PLOTS ========================================
 
 # Add albatross silhouettes
@@ -1201,3 +1132,37 @@ table2.csv <- cbind(waal_incub.fixef_MS, waal_brooding.fixef_MS)
 readr::write_excel_csv(table2.csv, "Data_outputs/waal_coefficients.csv")
 
 
+# * TABLE S2 * VIF SUMMARY =====================================================
+
+vif_incub.bba <- data.frame(check_collinearity(incub_brms.bba)) %>%
+  mutate(Species = "BBAL", Phase = "Incubation") %>%
+  relocate(c(Species, Phase), .before = Term)
+
+
+vif_incub.waal <- data.frame(check_collinearity(incub_brms.waal)) %>%
+  mutate(Species = "WAAL", Phase = "Incubation") %>%
+  relocate(c(Species, Phase), .before = Term)
+
+vif_brooding.bba <- data.frame(check_collinearity(brooding_brms.bba)) %>%
+  mutate(Species = "BBAL", Phase = "Brooding") %>%
+  relocate(c(Species, Phase), .before = Term)
+
+
+vif_brooding.waal <- data.frame(check_collinearity(brooding_brms.waal)) %>%
+  mutate(Species = "WAAL", Phase = "Brooding") %>%
+  relocate(c(Species, Phase), .before = Term)
+
+tables2 <- rbind(vif_incub.bba, vif_brooding.bba, vif_incub.waal, vif_brooding.waal) 
+tables2 %<>% mutate(VIF = round(VIF, 2), 
+                    VIF_CI_low = round(VIF_CI_low, 2), 
+                    VIF_CI_high = round(VIF_CI_high, 2),
+                    VIF = paste0(VIF, " [", VIF_CI_low, ", ", VIF_CI_high, "]"),
+                    Term = case_when(
+                      Term == "debt.days" ~ "Fasting debt",
+                      Term == "colony" ~ "Colony",
+                      Term == "median_trip.days" ~ "Pair-level median trip duration",
+                      Term == "diff_trip.days" ~ "Within-pair trip duration difference",
+                      Term == "diff_var.days" ~ "Within-pair trip variability difference")) %>% 
+  select(-c(SE_factor,Tolerance, Tolerance_CI_low, Tolerance_CI_high, VIF_CI_low, VIF_CI_high))
+
+readr::write_excel_csv(tables2, "Data_outputs/tableS2_vif.csv")
