@@ -194,25 +194,20 @@ Breeding success is summarised as: failed at egg stage, failed at chick stage, u
 
 ```{r TableS2_summarise_failure_rates}
 
-load("Data_inputs/BAS_demo_complete.RData")
-bas_fail <- bas_rs.full %>% filter(rs != "UNKNOWN" & rs != "NON-BREEDER"& !is.na(species)) %>%
-  select(species, colony, season, rs, pairID) %>% distinct()
+all_outcomes <- rbind(pair_behaviour.incub %>% select(c(pairID, species, colony, breeding_outcome)), 
+                   pair_behaviour.brooding %>% select(c(pairID, species, colony, breeding_outcome))) %>%
+             mutate(speCol = paste0(species, "_", colony))
 
-load("Data_inputs/Chize_demo_complete.RData")
-chize_fail <- chize_rs.full %>% filter(rs != "UNKNOWN" & rs != "NON-BREEDER" & !is.na(species)) %>%
-  select(species, colony, season, rs, pairID) %>% distinct()
 
-failure <- rbind(bas_fail, chize_fail)
-
-failure_summary <- failure %>%
+failure_summary <- all_outcomes %>%
   group_by(species, colony) %>%
   rename(Species = species, Colony = colony) %>%
   summarise(
     Observations = n(),
-    "Egg failed" = round(sum(rs == "FAILED_EGG")/Observations*100, 2),
-    "Chick failed" = round(sum(rs == "FAILED_CHICK")/Observations*100, 2),
-    "Failure stage unknown" = round(sum(rs == "FAILED")/Observations*100, 2),
-    Successful = round(sum(rs == "SUCCESSFUL")/Observations*100, 2)) %>%
+    "Egg failed" = round(sum(breeding_outcome == "FAILED_EGG")/Observations*100, 2),
+    "Chick failed" = round(sum(breeding_outcome == "FAILED_CHICK")/Observations*100, 2),
+    "Failure stage unknown" = round(sum(breeding_outcome == "FAILED")/Observations*100, 2),
+    Successful = round(sum(breeding_outcome == "SUCCESSFUL")/Observations*100, 2)) %>%
   mutate(Species = ifelse(Species == "BBA", "BBAL", "WAAL"),
          Colony = case_when(
            Colony == "birdisland" ~ "Bird Island",
