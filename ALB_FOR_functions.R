@@ -7,51 +7,48 @@ loadRData <- function(fileName){
   get(ls()[ls() != "fileName"])
 }
 
-# GPS functions -----------------------------------------------------------
-
-calc_speed <- function(mydf) {
-  
-  n = nrow(mydf)
-  
-  mydf$dist_next <- c(gcd.hf(mydf$longitude[2:n],
-                             mydf$latitude[2:n],
-                             mydf$longitude[1:(n-1)],
-                             mydf$latitude[1:(n-1)]),NA)
-  
-  dt = c(as.numeric(difftime(mydf$datetime[2:n], mydf$datetime[1:(n-1)], 
-                             units = "secs")), NA)
-  mydf$calc_speed <- mydf$dist_next*1000/dt
-  
-  return(mydf$calc_speed)
-  
-}
-
-
-
-
-gcd.hf <- function(long1, lat1, long2, lat2) { 
-  R <- 6371 # Earth mean radius [km]
-  deg2rad <- function(deg) return(deg*pi/180)
-  long1 <- deg2rad(long1)
-  long2 <- deg2rad(long2)
-  lat1 <- deg2rad(lat1)
-  lat2 <- deg2rad(lat2)
-  delta.long <- (long2 - long1)
-  delta.lat <- (lat2 - lat1)
-  a <- sin(delta.lat/2)^2 + cos(lat1) * cos(lat2) * sin(delta.long/2)^2
-  c <- 2 * asin(min(1,sqrt(a)))
-  
-  coo2 <- function(x){2 * asin(min(1,sqrt(x)))}
-  c <- lapply(a, coo2)
-  c <- do.call("c", c)
-  d = R * c
-  return(d) # Distance in km
-}
-
-
-
 
 # STATS FUNCTIONS ---------------------------------------------------------
+
+# model = incub_brms.bba
+# behaviour_data = behaviour.bba_incub
+# behaviour_var = "median_trip.days"
+# values = c(2,5)
+# colony = "kerguelen"
+
+calculate_prob_change <- function(model, 
+                                  behaviour_data, 
+                                  behaviour_var, 
+                                  values, 
+                                  colony) {
+  
+  # Create new dataframe with specified values
+  base_row <- data.frame(
+    colony = colony,
+    debt.days = mean(behaviour_data$debt.days, na.rm = TRUE),
+    median_trip.days = mean(behaviour_data$median_trip.days, na.rm = TRUE),
+    diff_trip.days = mean(behaviour_data$diff_trip.days, na.rm = TRUE),
+    diff_var.days = mean(behaviour_data$diff_var.days, na.rm = TRUE),
+    season = NA  )
+  
+  new_df <- base_row[rep(1, length(values)), ]
+  new_df[[behaviour_var]] <- values
+  
+  # Predict posterior probabilities
+  pp <- posterior_epred(model, newdata = new_df, allow_new_levels = TRUE)
+  pp_summary <- apply(pp, 2, function(x) c(mean = mean(x), quantile(x, probs = c(0.025, 0.975))))
+  
+  # Calculate differences
+  prob_change <- round(pp_summary[1, 2] - pp_summary[1, 1], 2)
+  ci_change_low <- pp_summary[2, 2] - pp_summary[2, 1]
+  ci_change_high <- pp_summary[3, 2] - pp_summary[3, 1]
+  ci_change_vals <- sort(c(ci_change_low, ci_change_high))
+  ci_change <- paste0("[", round(ci_change_vals[1], 2), "-", round(ci_change_vals[2], 2), "]")
+  
+  return(list(prob_change = prob_change, ci_change = ci_change))
+}
+
+
 
 log_to_percent <- function(coef) {
   odds_ratio <- exp(coef)
@@ -59,7 +56,10 @@ log_to_percent <- function(coef) {
 }
 
 
-
+# var_name = "b_debt.days"
+# fixef_data = waal_brooding.fixef
+# posterior_samples.df = posterior_samples.brooding_waal
+# colony_interaction = "b_debt.days:colonycrozet"
 
 process_interaction_estimates <- function(var_name, fixef_data, posterior_samples.df, colony_interaction) {
   
@@ -88,7 +88,8 @@ process_interaction_estimates <- function(var_name, fixef_data, posterior_sample
   
   # Compute probabilities
   samples <- posterior_samples.df[[var_name]] + posterior_samples.df[[colony_interaction]]
-  prop_rope <- round(prop_rope.func(samples), digits = 2)
+  prop_rope <-as.numeric(rope(samples, range = c(rope_lower, rope_upper), ci = 0.95))
+  prop_rope <- round(prop_rope, digits = 2)
    
   # Create a row to append
   result <- cbind(est, error, LCI, UCI, matrix(NA, 1, 3), exp(est), exp(LCI), exp(UCI), prop_rope)
@@ -100,6 +101,6 @@ process_interaction_estimates <- function(var_name, fixef_data, posterior_sample
 
 
 
-prop_rope.func <- function (variable) {  
-  mean(variable > rope_lower & variable < rope_upper) }
+# prop_rope.func <- function (variable) {  
+#   mean(variable > rope_lower & variable < rope_upper) }
 
