@@ -801,28 +801,30 @@ waal_brooding.fixef <- rbind(waal_brooding.fixef, cro_fixef)
 
 # Add albatross silhouettes
 bbal_incub.posteriors_plot2 <- ggdraw() +
-  draw_plot(bbal_incub.posteriors_plot + labs(y = "Incubation") +
+  draw_plot(bbal_incub.posteriors_plot + labs(y = "Incubation", title = "Black-browed albatrosses") +
               annotate("text", x = 0.9, y = 4.5, label = "Increases success") +
               annotate("text", x = -0.6, y = 4.5, label = "Decreases success") +
                 theme(axis.title.y = element_text(margin = margin(r = 20)),
                     axis.title.x = element_blank(),
-                    text = element_text(size = 16, family = "Calibri"))) +
+                    text = element_text(size = 16, family = "Calibri"),
+                    plot.title = element_text(size = 16, hjust = 0.5))) +
   draw_image(file.path("Figures/bbal_standing_silhouette.png"),
              scale = 0.25, x = 0.35, y = -0.28) 
   
 
 waal_incub.posteriors_plot2 <- ggdraw() +
-  draw_plot(waal_incub.posteriors_plot +
+  draw_plot(waal_incub.posteriors_plot + labs(title = "Wandering albatrosses") +
               annotate("text", x = 0.5, y = 4.5, label = "Increases success") +
               annotate("text", x = -0.4, y = 4.5, label = "Decreases success") +
               theme(axis.title.x = element_blank(),
                     axis.text.y = element_blank(),
-                    text = element_text(size = 16, family = "Calibri"))) +
+                    text = element_text(size = 16, family = "Calibri"),
+                    plot.title = element_text(size = 16, hjust = 0.5))) +
   draw_image(file.path("Figures/waal_standing_silhouette.png"),
              scale = 0.25, x = 0.38, y = -0.28)
 
 
-#png(file = "Figures/FIGURE1.png", width = 10, height = 10, units = "in", res = 100)
+#png(file = "Figures/FIGURE1.png", width = 10.2, height = 10, units = "in", res = 600)
 ggarrange(bbal_incub.posteriors_plot2,
           waal_incub.posteriors_plot2,
           bbal_brooding.posteriors_plot + 
@@ -1154,6 +1156,20 @@ bbal_incub.cond_plot.median_trip.days2 <- ggdraw() +
   draw_image(file.path("Figures/bbal_standing_silhouette.png"),
              scale = 0.25, x = 0.32, y = -0.23) 
 
+png(file = "Figures/presentation_2A.png", width = 6, height = 5, units = "in", res = 300)
+bbal_incub.cond_plot.median_trip.days
+dev.off()
+
+png(file = "Figures/presentation_2B.png", width = 6, height = 5, units = "in", res = 300)
+bbal_brooding.cond_plot.median_trip.days
+dev.off()
+
+
+png(file = "Figures/presentation_2C.png", width = 6, height = 5, units = "in", res = 300)
+bbal_brooding.cond_plot.diff_trip.days
+dev.off()
+
+
 #png(file = "Figures/FIGURE2.png", width = 10, height = 10, units = "in", res = 300)
 ggarrange(
   bbal_incub.cond_plot.median_trip.days2,
@@ -1184,6 +1200,21 @@ ggarrange(
 load("Data_outputs/waal_incub.cond_plot.diff_var.days.RData")
 load("Data_outputs/waal_brooding.cond_plot.median_trip.days.RData")
 load("Data_outputs/waal_brooding.cond_plot.diff_trip.days.RData")
+
+png(file = "Figures/presentation_3A.png", width = 6, height = 5, units = "in", res = 300)
+waal_incub.cond_plot.diff_var.days +
+              labs(y = "Incubation \nP|Breeding success")
+dev.off()
+
+png(file = "Figures/presentation_3B.png", width = 6, height = 5, units = "in", res = 300)
+waal_brooding.cond_plot.median_trip.days
+dev.off()
+
+
+png(file = "Figures/presentation_3C.png", width = 6, height = 5, units = "in", res = 300)
+waal_brooding.cond_plot.diff_trip.days
+dev.off()
+
 
 # Add albatross silhouette
 waal_incub.cond_plot.diff_var.days2 <- ggdraw() +
@@ -1235,68 +1266,77 @@ waal_incub_season.SD <- table2$`Estimate ± Est.Error`[15]
 waal_brooding_season.SD <- table2[15, 4]
 
 
-# bbal_incub_ker.T
-bbal_incub_ker.T_coef <- bbal_incub.fixef$Estimate[12]
-bbal_incub_ker.T_CI <- paste0("[", bbal_incub.fixef$`l-95% CI`[12], "-", bbal_incub.fixef$`u-95% CI`[12], "]")
-
-bbal_incub_ker.T_probs <- calculate_prob_change(bbal_incub.brms, bbal_incub.behaviour, "median_trip.days", c(2,7), "kerguelen")
-
-bbal_incub_ker.T_probChg <- as.numeric(bbal_incub_ker.T_probs$prob_change)
-bbal_incub_ker.T_probCIChg <- bbal_incub_ker.T_probs$ci_change
-
 # bbal_incub_bi.T
 bbal_incub_bi.T_coef <- bbal_incub.fixef$Estimate[4]
 bbal_incub_bi.T_CI <- paste0("[", bbal_incub.fixef$`l-95% CI`[4], "-", bbal_incub.fixef$`u-95% CI`[4], "]")
+bbal_incub_bi.T_ROPE <- bbal_incub.fixef$prop_rope[4]
 
-bbal_incub_bi.T_probs <- calculate_prob_change(bbal_incub.brms, bbal_incub.behaviour, "median_trip.days", c(2,7), "birdisland")
+bbal_incub_bi.T_probs <- calculate_prob_change(bbal_incub.brms, bbal_incub.behaviour, "median_trip.days", c(2,5), "birdisland")
 
 bbal_incub_bi.T_probChg <- as.numeric(bbal_incub_bi.T_probs$prob_change)
 bbal_incub_bi.T_probCIChg <- bbal_incub_bi.T_probs$ci_change
 
 
-# bbal_brooding_ker.T
-bbal_brooding_ker.T_coef <- bbal_brooding.fixef$Estimate[12]
-bbal_brooding_ker.T_CI <- paste0("[", bbal_brooding.fixef$`l-95% CI`[12], "-", bbal_brooding.fixef$`u-95% CI`[12], "]")
+# bbal_incub_ker.T
+bbal_incub_ker.T_coef <- bbal_incub.fixef$Estimate[8]
+bbal_incub_ker.T_CI <- paste0("[", bbal_incub.fixef$`l-95% CI`[8], "-", bbal_incub.fixef$`u-95% CI`[8], "]")
+bbal_incub_ker.T_ROPE <- bbal_incub.fixef$prop_rope[8]
 
-bbal_brooding_ker.T_probs <- calculate_prob_change(bbal_brooding.brms, bbal_brooding.behaviour, "median_trip.days", c(2,7), "kerguelen")
+bbal_incub_ker.T_probs <- calculate_prob_change(bbal_incub.brms, bbal_incub.behaviour, "median_trip.days", c(2,5), "kerguelen")
+
+bbal_incub_ker.T_probChg <- as.numeric(bbal_incub_ker.T_probs$prob_change)
+bbal_incub_ker.T_probCIChg <- bbal_incub_ker.T_probs$ci_change
+
+
+
+# bbal_brooding_ker.T
+bbal_brooding_ker.T_coef <- bbal_brooding.fixef$Estimate[8]
+bbal_brooding_ker.T_CI <- paste0("[", bbal_brooding.fixef$`l-95% CI`[8], "-", bbal_brooding.fixef$`u-95% CI`[8], "]")
+bbal_brooding_ker.T_ROPE <- bbal_brooding.fixef$prop_rope[8]
+
+bbal_brooding_ker.T_probs <- calculate_prob_change(bbal_brooding.brms, bbal_brooding.behaviour, "median_trip.days", c(1,2), "kerguelen")
 
 bbal_brooding_ker.T_probChg <- as.numeric(bbal_brooding_ker.T_probs$prob_change)
 bbal_brooding_ker.T_probCIChg <- bbal_brooding_ker.T_probs$ci_change
 
 # bbal_brooding_ker.D
-bbal_brooding_ker.D_coef <- bbal_brooding.fixef$Estimate[13]
-bbal_brooding_ker.D_CI <- paste0("[", bbal_brooding.fixef$`l-95% CI`[13], "-", bbal_brooding.fixef$`u-95% CI`[13], "]")
+bbal_brooding_ker.D_coef <- bbal_brooding.fixef$Estimate[9]
+bbal_brooding_ker.D_CI <- paste0("[", bbal_brooding.fixef$`l-95% CI`[9], "-", bbal_brooding.fixef$`u-95% CI`[9], "]")
+bbal_brooding_ker.D_ROPE <- bbal_brooding.fixef$prop_rope[9]
 
-bbal_brooding_ker.D_probs <- calculate_prob_change(bbal_brooding.brms, bbal_brooding.behaviour, "diff_trip.days", c(2,7), "kerguelen")
+bbal_brooding_ker.D_probs <- calculate_prob_change(bbal_brooding.brms, bbal_brooding.behaviour, "diff_trip.days", c(0, 2), "kerguelen")
 
 bbal_brooding_ker.D_probChg <- as.numeric(bbal_brooding_ker.D_probs$prob_change)
 bbal_brooding_ker.D_probCIChg <- bbal_brooding_ker.D_probs$ci_change
 
 
 # waal_incub_cro_V
-waal_incub_cro.V_coef <- waal_incub.fixef$Estimate[14]
-waal_incub_cro.V_CI <- paste0("[", waal_incub.fixef$`l-95% CI`[14], "-", waal_incub.fixef$`u-95% CI`[14], "]")
+waal_incub_cro.V_coef <- waal_incub.fixef$Estimate[10]
+waal_incub_cro.V_CI <- paste0("[", waal_incub.fixef$`l-95% CI`[10], "-", waal_incub.fixef$`u-95% CI`[10], "]")
+waal_incub_cro.V_ROPE <- waal_incub.fixef$prop_rope[10]
 
-waal_incub_cro.V_probs <- calculate_prob_change(waal_incub.brms, waal_brooding.behaviour, "diff_var.days", c(2,7), "crozet")
+waal_incub_cro.V_probs <- calculate_prob_change(waal_incub.brms, waal_brooding.behaviour, "diff_var.days", c(0,2), "crozet")
 
 waal_incub_cro.V_probChg <- as.numeric(waal_incub_cro.V_probs$prob_change)
 waal_incub_cro.V_probCIChg <- waal_incub_cro.V_probs$ci_change
 
 
 # waal_brooding_cro_T
-waal_brooding_cro.T_coef <- waal_brooding.fixef$Estimate[12]
-waal_brooding_cro.T_CI <- paste0("[", waal_brooding.fixef$`l-95% CI`[12], "-", waal_brooding.fixef$`u-95% CI`[12], "]")
+waal_brooding_cro.T_coef <- waal_brooding.fixef$Estimate[8]
+waal_brooding_cro.T_CI <- paste0("[", waal_brooding.fixef$`l-95% CI`[8], "-", waal_brooding.fixef$`u-95% CI`[8], "]")
+waal_brooding_cro.T_ROPE <- waal_brooding.fixef$prop_rope[8]
 
-waal_brooding_cro.T_probs <- calculate_prob_change(waal_brooding.brms, waal_brooding.behaviour, "median_trip.days", c(2,7), "crozet")
+waal_brooding_cro.T_probs <- calculate_prob_change(waal_brooding.brms, waal_brooding.behaviour, "median_trip.days", c(1,4), "crozet")
 
 waal_brooding_cro.T_probChg <- as.numeric(waal_brooding_cro.T_probs$prob_change)
 waal_brooding_cro.T_probCIChg <- waal_brooding_cro.T_probs$ci_change
 
 # waal_brooding_cro_D
-waal_brooding_cro.D_coef <- waal_brooding.fixef$Estimate[13]
-waal_brooding_cro.D_CI <- paste0("[", waal_brooding.fixef$`l-95% CI`[13], "-", waal_brooding.fixef$`u-95% CI`[13], "]")
+waal_brooding_cro.D_coef <- waal_brooding.fixef$Estimate[9]
+waal_brooding_cro.D_CI <- paste0("[", waal_brooding.fixef$`l-95% CI`[9], "-", waal_brooding.fixef$`u-95% CI`[9], "]")
+waal_brooding_cro.D_ROPE <- waal_brooding.fixef$prop_rope[9]
 
-waal_brooding_cro.D_probs <- calculate_prob_change(waal_brooding.brms, waal_brooding.behaviour, "diff_trip.days", c(2,7), "crozet")
+waal_brooding_cro.D_probs <- calculate_prob_change(waal_brooding.brms, waal_brooding.behaviour, "diff_trip.days", c(0,3), "crozet")
 
 waal_brooding_cro.D_probChg <- as.numeric(waal_brooding_cro.D_probs$prob_change)
 waal_brooding_cro.D_probCIChg <- waal_brooding_cro.D_probs$ci_change
@@ -1306,13 +1346,14 @@ waal_brooding_cro.D_probCIChg <- waal_brooding_cro.D_probs$ci_change
 
 Our analyses provided evidence that both the overall level of parental investment and the degree of coordination between the partners influenced breeding success in both black-browed and wandering albatrosses, with several effects showing similar patterns across species at the same (or nearby, in the case of Possession Island and Kerguelen) islands (Figure 1). However, the magnitude of these effects was somewhat smaller in wandering albatrosses, and effects were more pronounced during brooding than during incubation in both species. We found consistent among-season variation in breeding success across all models (Table 1, Table 2). Seasonal variability was greater during brooding (SD = `r bbal_brooding_season.SD` for black-browed albatrosses; `r waal_brooding_season.SD` for wandering albatrosses) than incubation (SD = `r bbal_incub_season.SD` and `r waal_incub_season.SD` respectively), suggesting stronger annual effects later in the breeding season.
 
-During incubation, breeding success in black-browed albatrosses increased with pair-level median trip duration ($T$) at both Bird Island and Kerguelen (Table 1). The estimated effects (log-odds, with 95% credible intervals) were `r bbal_incub_bi.T_coef` `r bbal_incub_bi.T_CI` at Bird Island and `r bbal_incub_ker.T_coef` `r bbal_incub_ker.T_CI` at Kerguelen. Over a 5-day increase in trip duration, this corresponded to an approximate increase in breeding success of `r bbal_incub_bi.T_probChg` `r bbal_incub_bi.T_probCIChg` percentage points at Bird Island, and a `r bbal_incub_ker.T_probChg` `r bbal_incub_ker.T_probCIChg` at Kerguelen (Figure 2A). We found no evidence that the fasting debt ($F$), difference in trip duration ($D$), or difference in trip variability ($V$) affected breeding success during incubation.
+During incubation, we found strong evidence that breeding success in black-browed albatrosses increased with pair-level median trip duration ($T$) at Bird Island, and negligible evidence for an effect at Kerguelen (Table 1). The estimated effect (log-odds with 95% credible intervals) at Bird Island was  `r bbal_incub_bi.T_coef` `r bbal_incub_bi.T_CI` (proportion inside ROPE = `r bbal_incub_bi.T_ROPE`. For an increase in trip duration from 2 to 5 days, this corresponded to an approximate increase in breeding success of `r bbal_incub_bi.T_probChg` `r bbal_incub_bi.T_probCIChg` percentage points a(Figure 2A). We found no strong evidence that the fasting debt ($F$), difference in trip duration ($D$), or difference in trip variability ($V$) affected breeding success during incubation.
 
-During brooding, breeding success at Kerguelen, but not at Bird Island, was positively associated with pair-level median trip duration ($T$; estimate = `r bbal_brooding_ker.T_coef` `r bbal_brooding_ker.T_CI`; Table 1), with a 5-day increase in trip duration corresponding to an approximate gain of `r bbal_brooding_ker.T_probChg` `r bbal_brooding_ker.T_probCIChg` percentage points (Figure 2B). However, the very wide credible interval, spanning both small positive and large positive values, reflects considerable uncertainty due to the small number of observations at Kerguelen, particularly for breeding failure. In contrast, greater within-pair difference in trip duration ($D$) reduced breeding success (`r bbal_brooding_ker.D_coef` `r bbal_brooding_ker.D_CI`; Table 1), corresponding to a `r bbal_brooding_ker.D_probChg` `r bbal_brooding_ker.D_probCIChg` percentage point decrease over a 5-day increase in duration differences. While both effects suggest a potential relationship, the credible intervals for both effects include 1 and span a very wide range of values, and just thus be interpreted with caution. We found no evidence for effects of behaviour at Bird Island, and no effects of $F$ or $V$ at Kerguelen. 
+During brooding, we found moderate evidence for a positive effect of pair-level median trip duration ($T$) on breeding success at Kerguelen, but not bird Island (interaction estimate = `r bbal_brooding_ker.T_coef` `r bbal_brooding_ker.T_CI`, proportion in ROPE = `r bbal_brooding_ker.T_ROPE`; Table 1). This equates to an approximate increase in breeding success of `r bbal_brooding_ker.T_probChg` `r bbal_brooding_ker.D_probCIChg` percentage points for an increase in trip duration from 1 to 2 days (Figure 2B). We also found moderate evidence that, in contrast, greater within-pair difference in trip duration ($D$) reduced breeding success at Kerguelen (interaction estimate = `r bbal_brooding_ker.D_coef` `r bbal_brooding_ker.D_CI`, proportion in ROPE = `r bbal_brooding_ker.D_ROPE`; Table 1), equating to a `r bbal_brooding_ker.T_probChg` `r bbal_brooding_ker.D_probCIChg` percentage point decline for an increase in duration differences from 0 to 2 days (Figure 2C). We found negligible evidence for effects of either behaviour at Bird Island, and no effects of F or V at Kerguelen. 
 
-In wandering albatrosses, we detected negligible evidence for effects of the various pair-level foraging metrics during incubation or brooding at Bird Island (Table 2). At Crozet, however, greater within-pair difference in trip variability ($V$) during incubation were weakly associated with lower breeding success (estimate = `r waal_incub_cro.V_coef` `r waal_incub_cro.V_CI`; Table 2), corresponding to an approximate decline in breeding success of `r waal_incub_cro.V_probChg` `r waal_incub_cro.V_probCIChg` percentage points over a 5-day increase in trip variability difference.
+For wandering albatrosses, we found negligible evidence that the various pair-level foraging metrics during incubation or brooding influenced breeding success at Bird Island (Table 2). At Crozet, however, we found weak to moderate evidence that within-pair differences in trip variability ($V$) during incubation were associated with lower breeding success (interaction estimate = `r waal_incub_cro.V_coef` `r waal_incub_cro.V_CI`, proportion inside ROPE = `r waal_incub_cro.V_ROPE`; Table 2). This corresponds to an approximate decline in breeding success of `r waal_incub_cro.V_probChg` `r waal_incub_cro.V_probCIChg` percentage points for an increase in trip variability difference of 0 to 2 days (Figure 3A).
 
-During brooding at Crozet, breeding success increased with pair-level median trip duration ($T$; estimate = `r waal_brooding_cro.T_coef` `r waal_brooding_cro.T_CI`; Table 2), with a 5-day increase in trip duration leading to a decline of `r waal_brooding_cro.T_probChg` `r waal_brooding_cro.T_probCIChg` percentage points in breeding success. Conversely, greater within-pair difference in trip duration ($D$) reduced breeding success (estimate = `r waal_brooding_cro.D_coef` `r waal_brooding_cro.D_CI`; Table 2), resulting in a decline in breeding success of `r waal_brooding_cro.D_probChg` `r waal_brooding_cro.D_probCIChg` percentage points over a 5-day increase in duration differences, though note again the uncertainty in these estimates. 
+During brooding at Crozet, we found weak to moderate evidence that breeding success increased with pair-level median trip duration ($T$; interaction estimate = `r waal_brooding_cro.T_coef` `r waal_brooding_cro.T_CI`, proportion inside ROPE = `r waal_incub_cro.V_ROPE`; Table 2). This would equate to an increase of `r waal_brooding_cro.T_probChg` `r waal_brooding_cro.T_probCIChg` percentage points in breeding success for an increase in trip duration from 1 to 4 days (Figure 3B). We found strong evidence that, conversely, greater within-pair difference in trip duration ($D$) reduced breeding success (interaction estimate = `r waal_brooding_cro.D_coef` `r waal_brooding_cro.D_CI`, proportion inside ROPE = `r waal_brooding_cro.D_ROPE`; Table 2), resulting in a decline in breeding success of `r waal_brooding_cro.D_probChg` `r waal_brooding_cro.D_probCIChg` percentage points for an increase in duration differences from 0 to 3 days (Figure 3C). 
+
 
 
 ```{r behavioural_correlations, eval = FALSE}

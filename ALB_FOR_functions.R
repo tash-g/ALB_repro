@@ -10,8 +10,8 @@ loadRData <- function(fileName){
 
 # STATS FUNCTIONS ---------------------------------------------------------
 
-# model = incub_brms.bba
-# behaviour_data = behaviour.bba_incub
+# model = bbal_brooding.brms
+# behaviour_data = bbal_brooding.behaviour
 # behaviour_var = "median_trip.days"
 # values = c(2,5)
 # colony = "kerguelen"
