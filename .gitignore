@@ -4,7 +4,7 @@
 .Ruserdata
 Figures
 Data_outputs
-Data_OG
+Data_inputs/Data_OG
 failureRates_results_MKD.html
 failureRates_SI_MKD.html
 failureRates_SI_MKD.Rmd
