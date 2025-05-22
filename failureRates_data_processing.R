@@ -43,55 +43,27 @@ species <- c("baBI", "baKer", "waBI", "waCro")
 # ______________________________ ####
 # LOAD DATA ==========================================================
 
+# Remove implausible trips and birds where breeding outcome is unknown
+
 ## BBA - BIRD ISLAND (baBI) ##
-load("Data_inputs/bba_birdis_breedingTrips.RData")
-baBI_trips <- all_trips %>% distinct(); rm(all_trips)
-baBI_trips %<>% mutate(tripID = NA)
-
-# Remove implausible trips
-baBI_trips %<>% filter(duration.mins > 360 & duration.days < 31)
-
-# Remove birds where sex or breeding outcome unknown
-baBI_trips <- subset(baBI_trips, !is.na(rs))
-baBI_trips.sex <- subset(baBI_trips, !is.na(sex))
-
+load("Data_inputs/ANON_bba_birdis_breedingTrips.RData")
+baBI_trips %<>% distinct() %>% 
+  filter(duration.mins > 360 & duration.days < 31 & !is.na(rs))
 
 ## BBA - KERGUELEN (baKer) ##
-load("Data_inputs/bba_kerguelen_breedingTrips.RData")
-baKer_trips <- all_trips %>% distinct(); rm(all_trips)
-
-# Remove implausible trips
-baKer_trips %<>% filter(duration.mins > 360 & duration.days < 31)
-
-# Remove birds where sex or breeding outcome unknown
-baKer_trips <- subset(baKer_trips, !is.na(rs) & rs != "UNKNOWN")
-baKer_trips.sex <- subset(baKer_trips, !is.na(sex))
-
+load("Data_inputs/ANON_bba_kerguelen_breedingTrips.RData")
+baKer_trips %<>% distinct() %>% 
+  filter(duration.mins > 360 & duration.days < 31 & !is.na(rs) & rs != "UNKNOWN")
 
 ## WAAL - BIRD ISLAND (waBI) ##
-load("Data_inputs/waal_birdis_breedingTrips.RData")
-waBI_trips <- all_trips %>% distinct(); rm(all_trips)
-
-# Remove implausible trips
-waBI_trips %<>% filter(duration.mins > 360 & duration.days < 31)
-
-# Remove birds where sex or breeding outcome unknown
-waBI_trips <- subset(waBI_trips, !is.na(rs))
-waBI_trips.sex <- subset(waBI_trips, !is.na(sex))
-
-
+load("Data_inputs/ANON_waal_birdis_breedingTrips.RData")
+waBI_trips %<>% distinct() %>% 
+  filter(duration.mins > 360 & duration.days < 31 & !is.na(rs))
 
 ## WAAL - CROZET (waCro) ##
-load("Data_inputs/waal_crozet_breedingTrips.RData")
-waCro_trips <- all_trips %>% distinct(); rm(all_trips)
-
-# Remove implausible trips
-waCro_trips %<>% filter(duration.mins > 360 & duration.days < 31)
-
-# Remove birds where sex or breeding outcome unknown
-waCro_trips <- subset(waCro_trips, !is.na(rs) & rs != "UNKNOWN" & rs != "NON-BREEDER")
-waCro_trips.sex <- subset(waCro_trips, !is.na(sex))
-
+load("Data_inputs/ANON_waal_crozet_breedingTrips.RData")
+waCro_trips %<>% distinct() %>%
+  filter(duration.mins > 360 & duration.days < 31 & !is.na(rs) & rs != "UNKNOWN" & rs != "NON-BREEDER")
 
 
 # How many breeding dates were estimated? ---------------------------------
@@ -112,8 +84,7 @@ for (i in 1:length(species)) {
   
   my_species = species[i]
   species_trips <- get(paste0(my_species, "_trips"))
-  species_trips %<>% select(-tripID) %>% distinct()
-  species_trips %<>% arrange(pairID, start)
+  species_trips %<>% distinct() %>% arrange(pairID, start)
   
   species_trips %<>%
     filter(phase == "incubation") %>%
@@ -169,58 +140,18 @@ for (i in 1:length(species)) {
            diff_trip.days = diff_trip.days/24,
            diff_var.days = diff_var.days/24)
   
-  ## For birds where sex is known ##
-  fasting_metrics.knownSex <- species_trips %>%
-    filter(!is.na(sex)) %>%
-    group_by(pairID, season) %>%
-    mutate(bird1 = ring[1],
-           bird2 = partner[1],
-           n_trips = n(),
-           trip_rank = row_number()) %>%
-    filter(!(n_trips %% 2 != 0 & trip_rank == max(trip_rank))) %>%
-    summarise(debt.F = sum(fasting_debt.hours[sex == "F"], na.rm = T),
-              debt.M = sum(fasting_debt.hours[sex == "M"], na.rm = T),
-              debt.days = (debt.M - debt.F)/24) %>%
-    select(-c(debt.F, debt.M))
-  
-  pair_behaviour.known_sex <- species_trips %>%
-    filter(!is.na(sex)) %>%
-    group_by(pairID, season) %>%
-    summarise(trip_days.F = median(duration.days[sex == "F"], na.rm = T),
-              trip_days.M = median(duration.days[sex == "M"], na.rm = T),
-              sd_trip.F = sd(duration.days[sex == "F"], na.rm = T),
-              sd_trip.M = sd(duration.days[sex == "M"], na.rm = T),
-              male_female_diff.var = sd_trip.M - sd_trip.F, 
-              breeding_outcome = rs[1],
-              colony = colony[1],
-              species = species[1]) %>%
-    # Binary breeding outcome
-    mutate(breeding_outcome.bin = ifelse(breeding_outcome == "SUCCESSFUL", 1, 0))
-  
-  pair_behaviour.known_sex <- merge(pair_behaviour.known_sex, fasting_metrics.knownSex,
-                                    by = c("pairID", "season"), all.x = TRUE)
-  
   ## Output the data
   assign(paste0(my_species, "_pair_behaviour"), pair_behaviour)
-  assign(paste0(my_species, "_pair_behaviour.known_sex"), pair_behaviour.known_sex)
   
 }
 
 ## Make a combined dataframe with dummy species/col variable
-pair_behaviour.incub <- rbind(baBI_pair_behaviour %>% mutate(colony = "birdisland", species = "BBA", speCol = "baBI"), 
-                              baKer_pair_behaviour %>% mutate(colony = "kerguelen", species = "BBA", speCol = "baKer"), 
+pair_behaviour.incub <- rbind(baBI_pair_behaviour %>% mutate(colony = "birdisland", species = "BBAL", speCol = "baBI"), 
+                              baKer_pair_behaviour %>% mutate(colony = "kerguelen", species = "BBAL", speCol = "baKer"), 
                               waBI_pair_behaviour %>% mutate(colony = "birdisland", species = "WAAL", speCol = "waBI"),
                               waCro_pair_behaviour %>% mutate(colony = "crozet", species = "WAAL", speCol = "waCro"))
 
-pair_behaviour.incub_withSex <- rbind(baBI_pair_behaviour.known_sex %>% mutate(colony = "birdisland", species = "BBA", speCol = "baBI"), 
-                                      baKer_pair_behaviour.known_sex %>% mutate(colony = "kerguelen", species = "BBA", speCol = "baKer"), 
-                                      waBI_pair_behaviour.known_sex %>% mutate(colony = "birdisland", species = "WAAL", speCol = "waBI"),
-                                      waCro_pair_behaviour.known_sex %>% mutate(colony = "crozet", species = "WAAL", speCol = "waCro"))
-
-
 save(pair_behaviour.incub, file = "Data_inputs/all_pair_behaviour_incub.RData")
-save(pair_behaviour.incub_withSex, file = "Data_inputs/all_pair_behaviour_incub_withSex.RData")
-
 
 
 
@@ -230,8 +161,7 @@ for (i in 1:length(species)) {
   
   my_species = species[i]
   species_trips <- get(paste0(my_species, "_trips"))
-  species_trips %<>% select(-tripID) %>% distinct()
-  species_trips %<>% arrange(pairID, start)
+  species_trips %<>% distinct() %>% arrange(pairID, start)
   
   species_trips %<>%
     filter(phase == "brooding") %>%
@@ -263,8 +193,7 @@ for (i in 1:length(species)) {
     group_by(pairID, season) %>%
     mutate(bird1 = ring[1],
            bird2 = partner[1]) %>%
-    summarise(bird1 = bird1[1], bird2 = bird2[1],
-              breeding_outcome = rs[1],
+    summarise(breeding_outcome = rs[1],
               colony = colony[1],
               species = species[1],
               # Trip variability
@@ -288,56 +217,16 @@ for (i in 1:length(species)) {
            diff_trip.days = diff_trip.days/24,
            diff_var.days = diff_var.days/24)
   
-  ## For birds where sex is known ##
-  fasting_metrics.knownSex <- species_trips %>%
-    filter(!is.na(sex)) %>%
-    group_by(pairID, season) %>%
-    mutate(bird1 = ring[1],
-           bird2 = partner[1],
-           n_trips = n(),
-           trip_rank = row_number()) %>%
-    filter(!(n_trips %% 2 != 0 & trip_rank == max(trip_rank))) %>%
-    summarise(debt.F = sum(fasting_debt.hours[sex == "F"], na.rm = T),
-              debt.M = sum(fasting_debt.hours[sex == "M"], na.rm = T),
-              debt.days = (debt.M - debt.F)/24) %>%
-    select(-c(debt.F, debt.M))
-  
-  pair_behaviour.known_sex <- species_trips %>%
-    filter(!is.na(sex)) %>%
-    group_by(pairID, season) %>%
-    summarise(trip_days.F = median(duration.days[sex == "F"], na.rm = T),
-              trip_days.M = median(duration.days[sex == "M"], na.rm = T),
-              sd_trip.F = sd(duration.days[sex == "F"], na.rm = T),
-              sd_trip.M = sd(duration.days[sex == "M"], na.rm = T),
-              male_female_diff.var = sd_trip.M - sd_trip.F, 
-              breeding_outcome = rs[1],
-              colony = colony[1],
-              species = species[1]) %>%
-    # Binary breeding outcome
-    mutate(breeding_outcome.bin = ifelse(breeding_outcome == "SUCCESSFUL", 1, 0))
-  
-  pair_behaviour.known_sex <- merge(pair_behaviour.known_sex, fasting_metrics.knownSex,
-                                    by = c("pairID", "season"), all.x = TRUE)
-  
   ## Output the data
   assign(paste0(my_species, "_pair_behaviour"), pair_behaviour)
-  assign(paste0(my_species, "_pair_behaviour.known_sex"), pair_behaviour.known_sex)
   
 }
 
 ## Make a combined dataframe with dummy species/col variable
-pair_behaviour.brooding <- rbind(baBI_pair_behaviour %>% mutate(colony = "birdisland", species = "BBA", speCol = "baBI"), 
-                                 baKer_pair_behaviour %>% mutate(colony = "kerguelen", species = "BBA", speCol = "baKer"), 
+pair_behaviour.brooding <- rbind(baBI_pair_behaviour %>% mutate(colony = "birdisland", species = "BBAL", speCol = "baBI"), 
+                                 baKer_pair_behaviour %>% mutate(colony = "kerguelen", species = "BBAL", speCol = "baKer"), 
                                  waBI_pair_behaviour %>% mutate(colony = "birdisland", species = "WAAL", speCol = "waBI"),
                                  waCro_pair_behaviour %>% mutate(colony = "crozet", species = "WAAL", speCol = "waCro"))
 
-pair_behaviour.brooding_withSex <- rbind(baBI_pair_behaviour.known_sex %>% mutate(colony = "birdisland", species = "BBA", speCol = "baBI"), 
-                                         baKer_pair_behaviour.known_sex %>% mutate(colony = "kerguelen", species = "BBA", speCol = "baKer"), 
-                                         waBI_pair_behaviour.known_sex %>% mutate(colony = "birdisland", species = "WAAL", speCol = "waBI"),
-                                         waCro_pair_behaviour.known_sex %>% mutate(colony = "crozet", species = "WAAL", speCol = "waCro"))
-
-
 save(pair_behaviour.brooding, file = "Data_inputs/all_pair_behaviour_brooding.RData")
-save(pair_behaviour.brooding_withSex, file = "Data_inputs/all_pair_behaviour_brooding_withSex.RData")
-
 

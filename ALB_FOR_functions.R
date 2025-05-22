@@ -81,10 +81,8 @@ process_interaction_estimates <- function(var_name, fixef_data, posterior_sample
   est <- fixef_data$Estimate[which(rownames(fixef_data) == gsub("b_", "", var_name))] +
     fixef_data$Estimate[which(rownames(fixef_data) == gsub("b_", "", colony_interaction))]
   error <- se_total
-  LCI <- fixef_data$`l-95% CI`[which(rownames(fixef_data) == gsub("b_", "", var_name))] +
-    fixef_data$`l-95% CI`[which(rownames(fixef_data) == gsub("b_", "", colony_interaction))]
-  UCI <- fixef_data$`u-95% CI`[which(rownames(fixef_data) == gsub("b_", "", var_name))] +
-    fixef_data$`u-95% CI`[which(rownames(fixef_data) == gsub("b_", "", colony_interaction))]
+  LCI <- NA 
+  UCI <- NA
   
   # Compute probabilities
   samples <- posterior_samples.df[[var_name]] + posterior_samples.df[[colony_interaction]]

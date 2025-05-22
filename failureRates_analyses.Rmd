@@ -80,20 +80,22 @@ variable_labels <- c(
 
 load("Data_inputs/all_pair_behaviour_incub.RData")
 
-bbal_incub.behaviour <- pair_behaviour.incub %>% filter(species == "BBA") 
+bbal_incub.behaviour <- pair_behaviour.incub %>% filter(species == "BBAL") 
 waal_incub.behaviour <- pair_behaviour.incub %>% filter(species == "WAAL")
 
 # Load brooding data
 
 load("Data_inputs/all_pair_behaviour_brooding.RData")
 
-bbal_brooding.behaviour <- pair_behaviour.brooding %>% filter(species == "BBA") 
+bbal_brooding.behaviour <- pair_behaviour.brooding %>% filter(species == "BBAL") 
 waal_brooding.behaviour <- pair_behaviour.brooding %>% filter(species == "WAAL")
 
 
 # Data with sex (just for sample sizes)
-load("Data_inputs/all_pair_behaviour_incub_withSex.RData")
-load("Data_inputs/all_pair_behaviour_brooding_withSex.RData")
+load("Data_inputs/ANON_all_pair_behaviour_incub_withSex.RData")
+load("Data_inputs/ANON_all_pair_behaviour_brooding_withSex.RData")
+
+
 
 ```
 
@@ -167,8 +169,7 @@ table_s1 <- data.frame(
                        paste(sort(unique(years_brooding[[1]])), collapse = ", "),
                        paste(sort(unique(years_brooding[[2]])), collapse = ", "),
                        paste(sort(unique(years_brooding[[3]])), collapse = ", "),
-                       paste(sort(unique(years_brooding[[4]])), collapse = ", ")
-                       )
+                       paste(sort(unique(years_brooding[[4]])), collapse = ", ") )
            )
 
 rm(pair_behaviour.incub_withSex)
@@ -208,8 +209,7 @@ failure_summary <- all_outcomes %>%
     "Chick failed" = round(sum(breeding_outcome == "FAILED_CHICK")/Observations*100, 2),
     "Failure stage unknown" = round(sum(breeding_outcome == "FAILED")/Observations*100, 2),
     Successful = round(sum(breeding_outcome == "SUCCESSFUL")/Observations*100, 2)) %>%
-  mutate(Species = ifelse(Species == "BBA", "BBAL", "WAAL"),
-         Colony = case_when(
+  mutate(Colony = case_when(
            Colony == "birdisland" ~ "Bird Island",
            Colony == "kerguelen" ~ "Kerguelen",
            Colony == "crozet" ~ "Crozet") )
@@ -850,11 +850,15 @@ bbal_incub.fixef_MS <- bbal_incub.fixef %>%
   select(est_error, cis, prop_rope) %>%
   rename('Estimate \u00B1 Est.Error' = est_error, '95% CIs' = cis, 'Inside ROPE' = prop_rope)
 
+bbal_incub.fixef_MS <- bbal_incub.fixef_MS[-(11:14),]
+
 bbal_brooding.fixef_MS <- bbal_brooding.fixef %>%
   mutate(est_error = paste0(Estimate, " \u00B1 ", Est.Error),
          cis = paste0('[', `l-95% CI`, ", ", `u-95% CI`, ']')) %>%
   select(est_error, cis, prop_rope) %>%
   rename('Estimate \u00B1 Est.Error' = est_error, '95% CIs' = cis, 'Inside ROPE' = prop_rope)
+
+bbal_brooding.fixef_MS <- bbal_brooding.fixef_MS[-(11:14),]
 
 table1 <- cbind(bbal_incub.fixef_MS, bbal_brooding.fixef_MS)
 
@@ -868,11 +872,7 @@ new_order <- c("Intercept",
                "debt.days:colonykerguelen", 
                "colonykerguelen:median_trip.days", 
                "colonykerguelen:diff_trip.days", 
-               "colonykerguelen:diff_var.days", 
-               "col.b_debt.days", 
-               "col.b_median_trip.days", 
-               "col.b_diff_trip.days", 
-               "col.b_diff_var.days")
+               "colonykerguelen:diff_var.days")
 
 table1 <- table1[new_order, ]
 
@@ -886,12 +886,8 @@ new_names <- c(
   "within-pair difference in trip variability",
   "Fasting debt : Colony",
   "Pair-level median trip duration : Colony",
-  "within-pair difference in trip duration : Colony",
-  "within-pair difference in trip variability : Colony",
-  "Fasting debt (Kerguelen)",
-  "Pair-level median trip duration (Kerguelen)",
-  "within-pair difference in trip duration (Kerguelen)",
-  "within-pair difference in trip variability (Kerguelen)"
+  "Within-pair difference in trip duration : Colony",
+  "Within-pair difference in trip variability : Colony"
 )
 
 rownames(table1) <- new_names
@@ -936,11 +932,15 @@ waal_incub.fixef_MS <- waal_incub.fixef %>%
   select(est_error, cis, prop_rope) %>%
   rename('Estimate \u00B1 Est.Error' = est_error, '95% CIs' = cis, 'Inside ROPE' = prop_rope)
 
+waal_incub.fixef_MS <- waal_incub.fixef_MS[-(11:14),]
+
 waal_brooding.fixef_MS <- waal_brooding.fixef %>%
   mutate(est_error = paste0(Estimate, " \u00B1 ", Est.Error),
          cis = paste0('[', `l-95% CI`, ", ", `u-95% CI`, ']')) %>%
   select(est_error, cis, prop_rope) %>%
   rename('Estimate \u00B1 Est.Error' = est_error, '95% CIs' = cis, 'Inside ROPE' = prop_rope)
+
+waal_brooding.fixef_MS <- waal_brooding.fixef_MS[-(11:14),]
 
 table2 <- cbind(waal_incub.fixef_MS, waal_brooding.fixef_MS)
 
@@ -954,11 +954,7 @@ new_order <- c("Intercept",
                "debt.days:colonycrozet", 
                "colonycrozet:median_trip.days", 
                "colonycrozet:diff_trip.days", 
-               "colonycrozet:diff_var.days", 
-               "col.b_debt.days", 
-               "col.b_median_trip.days", 
-               "col.b_diff_trip.days", 
-               "col.b_diff_var.days")
+               "colonycrozet:diff_var.days")
 
 table2 <- table2[new_order, ]
 
@@ -968,16 +964,12 @@ new_names <- c(
   "Colony",
   "Fasting debt",
   "Pair-level median trip duration",
-  "within-pair difference in trip duration",
-  "within-pair difference in trip variability",
+  "Within-pair difference in trip duration",
+  "Within-pair difference in trip variability",
   "Fasting debt : Colony",
   "Pair-level median trip duration : Colony",
-  "within-pair difference in trip duration : Colony",
-  "within-pair difference in trip variability : Colony",
-  "Fasting debt (crozet)",
-  "Pair-level median trip duration (crozet)",
-  "within-pair difference in trip duration (crozet)",
-  "within-pair difference in trip variability (crozet)"
+  "Within-pair difference in trip duration : Colony",
+  "Within-pair difference in trip variability : Colony"
 )
 
 rownames(table2) <- new_names
@@ -1346,7 +1338,7 @@ waal_brooding_cro.D_probCIChg <- waal_brooding_cro.D_probs$ci_change
 
 Our analyses provided evidence that both the overall level of parental investment and the degree of coordination between the partners influenced breeding success in both black-browed and wandering albatrosses, with several effects showing similar patterns across species at the same (or nearby, in the case of Possession Island and Kerguelen) islands (Figure 1). However, the magnitude of these effects was somewhat smaller in wandering albatrosses, and effects were more pronounced during brooding than during incubation in both species. We found consistent among-season variation in breeding success across all models (Table 1, Table 2). Seasonal variability was greater during brooding (SD = `r bbal_brooding_season.SD` for black-browed albatrosses; `r waal_brooding_season.SD` for wandering albatrosses) than incubation (SD = `r bbal_incub_season.SD` and `r waal_incub_season.SD` respectively), suggesting stronger annual effects later in the breeding season.
 
-During incubation, we found strong evidence that breeding success in black-browed albatrosses increased with pair-level median trip duration ($T$) at Bird Island, and negligible evidence for an effect at Kerguelen (Table 1). The estimated effect (log-odds with 95% credible intervals) at Bird Island was  `r bbal_incub_bi.T_coef` `r bbal_incub_bi.T_CI` (proportion inside ROPE = `r bbal_incub_bi.T_ROPE`. For an increase in trip duration from 2 to 5 days, this corresponded to an approximate increase in breeding success of `r bbal_incub_bi.T_probChg` `r bbal_incub_bi.T_probCIChg` percentage points a(Figure 2A). We found no strong evidence that the fasting debt ($F$), difference in trip duration ($D$), or difference in trip variability ($V$) affected breeding success during incubation.
+During incubation, we found strong evidence that breeding success in black-browed albatrosses increased with pair-level median trip duration ($T$) at Bird Island, and negligible evidence for an effect at Kerguelen (Table 1). The estimated effect (log-odds with 95% credible intervals) at Bird Island was  `r bbal_incub_bi.T_coef` `r bbal_incub_bi.T_CI` (proportion inside ROPE = `r bbal_incub_bi.T_ROPE`. For an increase in trip duration from 2 to 5 days, this corresponded to an approximate increase in breeding success of `r bbal_incub_bi.T_probChg` `r bbal_incub_bi.T_probCIChg` percentage points (Figure 2A). We found no strong evidence that the fasting debt ($F$), difference in trip duration ($D$), or difference in trip variability ($V$) affected breeding success during incubation.
 
 During brooding, we found moderate evidence for a positive effect of pair-level median trip duration ($T$) on breeding success at Kerguelen, but not bird Island (interaction estimate = `r bbal_brooding_ker.T_coef` `r bbal_brooding_ker.T_CI`, proportion in ROPE = `r bbal_brooding_ker.T_ROPE`; Table 1). This equates to an approximate increase in breeding success of `r bbal_brooding_ker.T_probChg` `r bbal_brooding_ker.D_probCIChg` percentage points for an increase in trip duration from 1 to 2 days (Figure 2B). We also found moderate evidence that, in contrast, greater within-pair difference in trip duration ($D$) reduced breeding success at Kerguelen (interaction estimate = `r bbal_brooding_ker.D_coef` `r bbal_brooding_ker.D_CI`, proportion in ROPE = `r bbal_brooding_ker.D_ROPE`; Table 1), equating to a `r bbal_brooding_ker.T_probChg` `r bbal_brooding_ker.D_probCIChg` percentage point decline for an increase in duration differences from 0 to 2 days (Figure 2C). We found negligible evidence for effects of either behaviour at Bird Island, and no effects of F or V at Kerguelen. 
 
