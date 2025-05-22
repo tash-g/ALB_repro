@@ -11,5 +11,9 @@ failureRates_code_graveyard.R
 failureRates_additional_analyses.R
 Data_inputs/all_pair_behaviour_brooding_withSex.RData
 Data_inputs/all_pair_behaviour_incub_withSex.RData
+Data_inputs/all_pair_behaviour_brooding.RData
+Data_inputs/all_pair_behaviour_incub.RData
 failureRates_main_analysis.R
 failureRates_analyses.html
+failureRates_anonymise_rings.R
+rings_lookup.RData
