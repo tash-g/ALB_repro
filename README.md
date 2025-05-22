@@ -9,9 +9,9 @@ Parental coordination and environment interact to drive breeding success in alba
 ## Scripts
 A short description of each script is given below.
 
-- **ALB_FOR_functions** This script contains custom functions required to run the analyses and data porcessing.
-- **failureRates_analyses.Rmd** This script runs all the analyses in the paper, and produces the figures and tables for the main text and supplementary materials. The markdown file will generate the text from the results section.
-- **failureRates_data_processing.Rmd** Run this first. This script processes the trip data into the format required for the analyses. Foraging trips tracked during the breeding period for each population are grouped by each pair, and the derived pair-level behavioural metrics are calculated.
+- **ALB_FOR_functions**: Contains custom functions required for data processing and analysis.
+- **failureRates_data_processing.Rmd**: *Run this first*. This script processes the trip data into the format required for analysis. Foraging trips tracked during the breeding period for each population are grouped by pair, and pair-level behavioural metrics are derived.
+- **failureRates_analyses.Rmd** Runs all analyses presented in the paper and generates the figures and tables for both the main text and supplementary materials. This markdown file also produces the text for the Results section based on the analysis output.
 
 ## Data inputs
 
