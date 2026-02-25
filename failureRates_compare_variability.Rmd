@@ -1,0 +1,199 @@
+---
+title: "Comparison of site variability for: *Parental coordination and environment interact to drive breeding success in albatrosses*"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+# Define the packages
+packages <- c("dplyr", "lubridate", "magrittr", "tidyr", "ggplot2", "ggpubr", "kableExtra")
+
+# Install packages not yet installed - change lib to library path
+# installed_packages <- packages %in% rownames(installed.packages())
+# 
+# if (any(installed_packages == FALSE)) {
+#  install.packages(packages[!installed_packages])
+# }
+
+## Load packages
+invisible(lapply(packages, library, character.only = TRUE))
+
+# Suppress dplyr summarise warning
+options(dplyr.summarise.inform = FALSE)
+
+# Make sure using dplyr select
+select <- dplyr::select
+
+```
+
+
+```{r load_data_compute_variance}
+
+# Load  the environmental data ----
+
+data_ker <- read.csv("Data_inputs/bbal_ker_weekly_sst.csv")
+#range(year(data_ker$date)) # 1981-2025
+
+data_bi <- read.csv('Data_inputs/bbal_bi_weekly_sst.csv')
+#range(year(data_bi$date)) # 1981-2025
+
+
+# Compute variation ---- 
+
+# For each spatial cell, compute mean, SD and CV of SST through time
+
+## Create spatial cell ID
+data_bi %<>% 
+  mutate(cell = paste(x, y))
+
+data_ker %<>% 
+  mutate(cell = paste(x, y))
+
+
+## Compute variability
+cell_var_bi <- data_bi %>%
+  group_by(cell) %>%
+  summarise(
+    mean_sst = mean(sst, na.rm = TRUE), # mean SST at each cell through time
+    sd_sst   = sd(sst, na.rm = TRUE), # SD SST at each cell through time 
+    cv_sst   = ifelse(abs(mean_sst) < 1, NA, sd_sst / mean_sst), # variability relative to local mean
+    n_obs    = n() ) %>%
+  ungroup()
+
+cell_var_ker <- data_ker %>%
+  group_by(cell) %>%
+  summarise(
+    mean_sst = mean(sst, na.rm = TRUE),
+    sd_sst   = sd(sst, na.rm = TRUE),
+    cv_sst   = ifelse(abs(mean_sst) < 1, NA, sd_sst / mean_sst), 
+    n_obs    = n() ) %>%
+  ungroup()
+
+
+## Summarise variability across space
+site_summary_bi <- cell_var_bi %>%
+  summarise(
+    mean_sd_sst = mean(sd_sst, na.rm = TRUE), # temporal variability across cells
+    sd_sd_sst   = sd(sd_sst, na.rm = TRUE), # spatial hetereogeneity in temporal SD (variation among locations in how variable they are through time)
+    mean_cv_sst = mean(cv_sst, na.rm = TRUE), # relative temporal variability
+    sd_cv_sst = sd(cv_sst, na.rm = TRUE),
+    n_cells = n() ) %>%
+  mutate(colony = "Bird Island")
+
+site_summary_ker <- cell_var_ker %>%
+  summarise(
+    mean_sd_sst = mean(sd_sst, na.rm = TRUE),  
+    sd_sd_sst   = sd(sd_sst, na.rm = TRUE), 
+    mean_cv_sst = mean(cv_sst, na.rm = TRUE), 
+    sd_cv_sst = sd(cv_sst, na.rm = TRUE),
+    n_cells = n() ) %>%
+  mutate(colony = "Kerguelen")
+
+site_summary <- rbind(site_summary_bi, site_summary_ker)
+
+save(site_summary, file = "Data_outputs/sst_variability_comparison")
+
+
+```
+
+```{r table_S3}
+
+table_s3 <- site_summary %>% relocate(colony, .before = "mean_sd_sst")
+
+table_s3 %>%
+  kable("html", row.names = FALSE, digits = 2,
+        caption = "Table S3. Mean and spatial standard deviation of per-cell temporal standard deviation (SD) and coefficient of variation (CV) of sea-surface temperature (SST) within each colony’s foraging range. SD of SST indicates variability over time; CV of SST indicates variability relative to mean SST over time. N cells indicates the number of cells used in the summary calculations.") %>%
+  kable_classic() 
+
+```
+
+# Model variability
+
+
+```{r model_variability}
+# Model variability across sites ----
+
+cell_var_bi %<>% mutate(colony = "birdisland")
+cell_var_ker %<>% mutate(colony = "kerguelen")
+
+cell_var_all <- rbind(cell_var_bi, cell_var_ker)
+
+
+lm_var <- lm(sd_sst ~ colony, data = cell_var_all)
+lm_var.summary <- summary(lm_var)$coefficients
+
+lm_cv <- lm(cv_sst ~ colony, data = cell_var_all)
+lm_cv.summary <- summary(lm_cv)$coefficients
+
+```
+
+We used linear models to compare variability (SD SST) and coefficient of variation (CV SST) across cells at each colony.
+
+Analyses of per-cell SD and CV values showed that Bird Island was more variable in absolute SST over time (SD SST: t = `r lm_var.summary[2,3]`, df = `r summary(lm_var)$df[2]`, p = `r lm_var.summary[2, 4]`) and that this pattern held even when considering variability relative to local mean SST (CV SST: t = `r lm_cv.summary[2,3]`, df = `r summary(lm_cv)$df[2]`, p = `r lm_cv.summary[2, 4]`).
+
+# Plot variability at each colony
+
+```{r plot_variability}
+
+## Split cells into coords
+cell_var_xy.bi <- cell_var_bi %>%
+  separate(cell, into = c("x", "y"), sep = " ") %>%
+  mutate(
+    x = as.numeric(x),
+    y = as.numeric(y) )
+
+cell_var_xy.ker <- cell_var_ker %>%
+  separate(cell, into = c("x", "y"), sep = " ") %>%
+  mutate(
+    x = as.numeric(x),
+    y = as.numeric(y) )
+
+
+## Plot gridmap
+plot_grid_bi <- ggplot(cell_var_xy.bi, aes(x = x, y = y, fill = cv_sst)) +
+  geom_tile() +
+  ylim(c(-60, -45)) + # cropping empty space
+  coord_equal() +
+  scale_fill_viridis_c(
+    name = "SST variability (CV)",
+    option = "C") +
+  labs(x = "Longitude", y = "Latitude", tag = "(A)") +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        text = element_text(size = 16),
+        legend.position = "none")
+
+plot_grid_ker <- ggplot(cell_var_xy.ker, aes(x = x, y = y, fill = cv_sst)) +
+  geom_tile() +
+  coord_equal() +
+  scale_fill_viridis_c(
+    name = "SST variability (CV)",
+    option = "C") +
+  labs(x = "Longitude", y = "Latitude", tag = "(B)") +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        text = element_text(size = 16),
+        plot.margin = margin(0, 0, 0, 0))
+
+```
+
+## Figure S1
+
+```{r figure_S1, caption = "Figure S1. Spatial distribution of relative temporal sea-surface temperature variability within the core foraging ranges of (A) Bird Island and (B) Kerguelen. Colours represent the coefficient of variation (CV) of weekly SST within each 0.25° grid cell over the breeding season (1981–2025). Warmer colours indicate greater temporal variability relative to the local mean SST, while cooler colours indicate more stable thermal conditions."}
+
+#png(file = "Figures/FIGURE_S1.png", width = 12, height = 4, units = "in", res = 600)
+ggarrange(plot_grid_bi, plot_grid_ker,
+          nrow = 1, 
+          ncol = 2,
+          align = "hv",
+          widths = c(1,1))
+#dev.off()
+
+```

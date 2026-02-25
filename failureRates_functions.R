@@ -1,6 +1,7 @@
 
 # DATA FUNCTIONS ----------------------------------------------------------
 
+
 loadRData <- function(fileName){
   #loads an RData file, and returns it
   load(fileName)
@@ -10,11 +11,11 @@ loadRData <- function(fileName){
 
 # STATS FUNCTIONS ---------------------------------------------------------
 
-# model = bbal_brooding.brms
-# behaviour_data = bbal_brooding.behaviour
+# model = bbal_incub.brms
+# behaviour_data = bbal_incub.behaviour
 # behaviour_var = "median_trip.days"
 # values = c(2,5)
-# colony = "kerguelen"
+# colony = "birdisland"
 
 calculate_prob_change <- function(model, 
                                   behaviour_data, 
@@ -25,10 +26,9 @@ calculate_prob_change <- function(model,
   # Create new dataframe with specified values
   base_row <- data.frame(
     colony = colony,
-    debt.days = mean(behaviour_data$debt.days, na.rm = TRUE),
     median_trip.days = mean(behaviour_data$median_trip.days, na.rm = TRUE),
-    diff_trip.days = mean(behaviour_data$diff_trip.days, na.rm = TRUE),
-    diff_var.days = mean(behaviour_data$diff_var.days, na.rm = TRUE),
+    diff_trip_abs.days = mean(behaviour_data$diff_trip_abs.days, na.rm = TRUE),
+    diff_var_abs.days = mean(behaviour_data$diff_var_abs.days, na.rm = TRUE),
     season = NA  )
   
   new_df <- base_row[rep(1, length(values)), ]
@@ -39,9 +39,9 @@ calculate_prob_change <- function(model,
   pp_summary <- apply(pp, 2, function(x) c(mean = mean(x), quantile(x, probs = c(0.025, 0.975))))
   
   # Calculate differences
-  prob_change <- round(pp_summary[1, 2] - pp_summary[1, 1], 2)
-  ci_change_low <- pp_summary[2, 2] - pp_summary[2, 1]
-  ci_change_high <- pp_summary[3, 2] - pp_summary[3, 1]
+  prob_change <- (round(pp_summary[1, 2] - pp_summary[1, 1], 2)) * 100
+  ci_change_low <- (pp_summary[2, 2] - pp_summary[2, 1]) * 100
+  ci_change_high <- (pp_summary[3, 2] - pp_summary[3, 1]) * 100
   ci_change_vals <- sort(c(ci_change_low, ci_change_high))
   ci_change <- paste0("[", round(ci_change_vals[1], 2), "-", round(ci_change_vals[2], 2), "]")
   
@@ -50,10 +50,44 @@ calculate_prob_change <- function(model,
 
 
 
+
+
+
+# brms_fit = bbal_incub.brms_weak
+# main_terms = predictors
+# int_terms = interaction_terms
+# colony_names = c("Bird Island", "Kerguelen")
+# 
+# extract_posteriors(brms_fit, main_effects, int_terms, colony_names)
+
+extract_posteriors <- function(brms_fit, main_terms, int_terms, colony_names) {
+  
+  draws <- as_draws_df(brms_fit)
+  out <- vector("list", length(main_terms))
+  
+  for (i in seq_along(main_terms)) {
+    
+    ref_est <- draws[[main_terms[i]]]
+    int_est <- draws[[int_terms[i]]]
+    
+    out[[i]] <- data.frame(
+      variable = main_terms[i],
+      value = c(ref_est, ref_est + int_est),
+      colony = rep(colony_names, each = length(ref_est)) )
+  }
+  
+  bind_rows(out)
+}
+
+
+
+
 log_to_percent <- function(coef) {
   odds_ratio <- exp(coef)
   return((odds_ratio - 1) * 100)
 }
+
+
 
 
 # var_name = "b_debt.days"

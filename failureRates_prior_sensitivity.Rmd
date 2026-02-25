@@ -1,0 +1,825 @@
+---
+title: "Analyses of model sensitivity to prior specification for: *Parental coordination and environment interact to drive breeding success in albatrosses*"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Define the packages
+packages <- c("bayestestR", "brms", "dplyr", "ggplot2", "ggpubr", "kableExtra", "magrittr","tidybayes", "tidyverse")
+
+# Install packages not yet installed - change lib to library path
+# installed_packages <- packages %in% rownames(installed.packages())
+# 
+# if (any(installed_packages == FALSE)) {
+#  install.packages(packages[!installed_packages])
+# }
+
+## Load packages
+invisible(lapply(packages, library, character.only = TRUE))
+
+# Suppress dplyr summarise warning
+options(dplyr.summarise.inform = FALSE)
+
+# Make sure using dplyr select
+select <- dplyr::select
+
+source("ALB_FOR_functions.R")
+
+```
+
+We assessed sensitivity to prior specification by refitting each model under two alternative prior scenarios: (i) weaker directional priors with increased variance, and (ii) non-directional priors centred at zero for all behavioural effects. Posterior estimates were compared across models to assess consistency in effect direction, magnitude, and uncertainty. 
+
+# Sensitivity design
+
+Here we defined two additional prior sets to determine the sensitivty of the model outputs to prior specification. In total, there are three prior sets: the original (reference) priors, weaker directional priors (same means, larger variance), and non-directional priors (centred at zero, same scale). 
+
+```{r prior_specification}
+
+# Reference
+
+bbal.priors_ref <- c(set_prior("normal(-0.25, 0.5)", class = "b", coef = "median_trip.days"),
+                     set_prior("normal(-0.5, 0.5)", class = "b", coef = "diff_trip_abs.days"),
+                     set_prior("normal(-0.12, 0.5)", class = "b", coef = "diff_var_abs.days"))
+
+waal.priors_ref <- c(set_prior("normal(-0.25, 0.5)", class = "b", coef = "median_trip.days"),
+                     set_prior("normal(-0.5, 0.5)", class = "b", coef = "diff_trip_abs.days"),
+                     set_prior("normal(-0.12, 0.5)", class = "b", coef = "diff_var_abs.days"))
+
+# Weaker
+
+bbal.priors_weak <- c(set_prior("normal(-0.25, 1.5)", class = "b", coef = "median_trip.days"),
+                     set_prior("normal(-0.5, 1.5)", class = "b", coef = "diff_trip_abs.days"),
+                     set_prior("normal(-0.12, 1.5)", class = "b", coef = "diff_var_abs.days"))
+
+waal.priors_weak <- c(set_prior("normal(-0.25, 1.5)", class = "b", coef = "median_trip.days"),
+                     set_prior("normal(-0.5, 1.5)", class = "b", coef = "diff_trip_abs.days"),
+                     set_prior("normal(-0.12, 1.5)", class = "b", coef = "diff_var_abs.days"))
+
+
+# Non-directional
+
+bbal.priors_noDir <- c(set_prior("normal(0, 0.5)", class = "b", coef = "median_trip.days"),
+                     set_prior("normal(0, 0.5)", class = "b", coef = "diff_trip_abs.days"),
+                     set_prior("normal(0, 0.5)", class = "b", coef = "diff_var_abs.days"))
+
+waal.priors_noDir <- c(set_prior("normal(0, 0.5)", class = "b", coef = "median_trip.days"),
+                     set_prior("normal(0, 0.5)", class = "b", coef = "diff_trip_abs.days"),
+                     set_prior("normal(0, 0.5)", class = "b", coef = "diff_var_abs.days"))
+
+```
+
+Next, we refit the models. 
+
+```{r load_datasets, echo = FALSE}
+
+load("Data_inputs/all_pair_behaviour_incub.RData")
+
+bbal_incub.behaviour <- pair_behaviour.incub %>% filter(species == "BBAL") 
+waal_incub.behaviour <- pair_behaviour.incub %>% filter(species == "WAAL")
+
+# Load brooding data
+
+load("Data_inputs/all_pair_behaviour_brooding.RData")
+
+bbal_brooding.behaviour <- pair_behaviour.brooding %>% filter(species == "BBAL") 
+waal_brooding.behaviour <- pair_behaviour.brooding %>% filter(species == "WAAL")
+
+```
+
+```{r model_refit, eval = FALSE}
+
+# Set formula
+bf <- brms::bf(breeding_outcome.bin ~
+                          median_trip.days * colony +
+                          diff_trip_abs.days * colony +
+                          diff_var_abs.days * colony +
+                          (1|season), 
+                        family = "bernoulli")
+
+# Incubation ####
+
+# Weaker 
+bbal_incub.brms_weak <- brm(
+  bf,
+  data = bbal_incub.behaviour,
+  prior = bbal.priors_weak,
+  cores = 4, chains = 4,
+  iter = 20000, warmup = 10000, thin = 10,
+  control = list(adapt_delta = 0.9999, max_treedepth = 14) )
+
+save(bbal_incub.brms_weak, file = "Data_outputs/bbal_incub_brms_model_weakPriors.RData")
+
+waal_incub.brms_weak <- brm(
+  bf,
+  data = waal_incub.behaviour,
+  prior = waal.priors_weak,
+  cores = 4, chains = 4,
+  iter = 20000, warmup = 10000, thin = 10,
+  control = list(adapt_delta = 0.9999, max_treedepth = 14) )
+
+save(waal_incub.brms_weak, file = "Data_outputs/waal_incub_brms_model_weakPriors.RData")
+
+
+# Non-directional
+
+bbal_incub.brms_noDir <- brm(
+  bf,
+  data = bbal_incub.behaviour,
+  prior = bbal.priors_noDir,
+  cores = 4, chains = 4,
+  iter = 20000, warmup = 10000, thin = 10,
+  control = list(adapt_delta = 0.9999, max_treedepth = 14) )
+
+save(bbal_incub.brms_noDir, file = "Data_outputs/bbal_incub_brms_model_noDirPriors.RData")
+
+waal_incub.brms_noDir <- brm(
+  bf,
+  data = waal_incub.behaviour,
+  prior = waal.priors_noDir,
+  cores = 4, chains = 4,
+  iter = 20000, warmup = 10000, thin = 10,
+  control = list(adapt_delta = 0.9999, max_treedepth = 14) )
+
+save(waal_incub.brms_noDir, file = "Data_outputs/waal_incub_brms_model_noDirPriors.RData")
+
+
+
+# Brooding ####
+
+# Weaker 
+bbal_brooding.brms_weak <- brm(
+  bf,
+  data = bbal_brooding.behaviour,
+  prior = bbal.priors_weak,
+  cores = 4, chains = 4,
+  iter = 20000, warmup = 10000, thin = 10,
+  control = list(adapt_delta = 0.9999, max_treedepth = 14) )
+
+save(bbal_brooding.brms_weak, file = "Data_outputs/bbal_brooding_brms_model_weakPriors.RData")
+
+waal_brooding.brms_weak <- brm(
+  bf,
+  data = waal_brooding.behaviour,
+  prior = waal.priors_weak,
+  cores = 4, chains = 4,
+  iter = 20000, warmup = 10000, thin = 10,
+  control = list(adapt_delta = 0.9999, max_treedepth = 14) )
+
+save(waal_brooding.brms_weak, file = "Data_outputs/waal_brooding_brms_model_weakPriors.RData")
+
+
+# Non-directional
+
+bbal_brooding.brms_noDir <- brm(
+  bf,
+  data = bbal_brooding.behaviour,
+  prior = bbal.priors_noDir,
+  cores = 4, chains = 4,
+  iter = 20000, warmup = 10000, thin = 10,
+  control = list(adapt_delta = 0.9999, max_treedepth = 14) )
+
+save(bbal_brooding.brms_noDir, file = "Data_outputs/bbal_brooding_brms_model_noDirPriors.RData")
+
+waal_brooding.brms_noDir <- brm(
+  bf,
+  data = waal_brooding.behaviour,
+  prior = waal.priors_noDir,
+  cores = 4, chains = 4,
+  iter = 20000, warmup = 10000, thin = 10,
+  control = list(adapt_delta = 0.9999, max_treedepth = 14) )
+
+save(waal_brooding.brms_noDir, file = "Data_outputs/waal_brooding_brms_model_noDirPriors.RData")
+
+```
+
+Finally, we compare the outputs. Results were considered robust to prior specification if posterior effect direction and qualitative inference (credible interval overlap with zero) were consistent across all prior scenarios. 
+
+```{r get_posteriors, echo = FALSE}
+
+predictors <- c("b_median_trip.days", "b_diff_trip_abs.days", "b_diff_var_abs.days")
+interactions.bbal <- c("b_median_trip.days:colonykerguelen", "b_colonykerguelen:diff_trip_abs.days", "b_colonykerguelen:diff_var_abs.days" )
+interactions.waal <- c("b_median_trip.days:colonycrozet", "b_colonycrozet:diff_trip_abs.days", "b_colonycrozet:diff_var_abs.days" )
+
+# Incubation ====
+
+# Reference
+load("Data_outputs/bbal_incub_brms_model.RData")
+load("Data_outputs/waal_incub_brms_model.RData")
+
+# Weaker 
+load("Data_outputs/bbal_incub_brms_model_weakPriors.RData")
+load("Data_outputs/waal_incub_brms_model_weakPriors.RData")
+
+# Non-directional
+load("Data_outputs/bbal_incub_brms_model_noDirPriors.RData")
+load("Data_outputs/waal_incub_brms_model_noDirPriors.RData")
+
+
+
+# Reference
+bbal_incub.posteriors <- extract_posteriors(bbal_incub.brms, predictors, interactions.bbal, c("Bird Island", "Kerguelen"))
+bbal_incub.posteriors %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+waal_incub.posteriors <- extract_posteriors(waal_incub.brms, predictors, interactions.waal, c("Bird Island", "Crozet"))
+waal_incub.posteriors %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+
+# Weak
+bbal_incub.posteriors_weak <- extract_posteriors(bbal_incub.brms_weak, predictors, interactions.bbal, c("Bird Island", "Kerguelen"))
+bbal_incub.posteriors_weak %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+waal_incub.posteriors_weak <- extract_posteriors(waal_incub.brms_weak, predictors, interactions.waal, c("Bird Island", "Crozet"))
+waal_incub.posteriors_weak %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+
+# Non-directional
+bbal_incub.posteriors_noDir <- extract_posteriors(bbal_incub.brms_noDir, predictors, interactions.bbal, c("Bird Island", "Kerguelen"))
+bbal_incub.posteriors_noDir %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+waal_incub.posteriors_noDir <- extract_posteriors(waal_incub.brms_noDir, predictors, interactions.waal, c("Bird Island", "Crozet"))
+waal_incub.posteriors_noDir %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+
+
+# Brooding ====
+
+# Reference
+load("Data_outputs/bbal_brooding_brms_model.RData")
+load("Data_outputs/waal_brooding_brms_model.RData")
+
+# Weaker 
+load("Data_outputs/bbal_brooding_brms_model_weakPriors.RData")
+load("Data_outputs/waal_brooding_brms_model_weakPriors.RData")
+
+# Non-directional
+load("Data_outputs/bbal_brooding_brms_model_noDirPriors.RData")
+load("Data_outputs/waal_brooding_brms_model_noDirPriors.RData")
+
+
+
+# Reference
+bbal_brooding.posteriors <- extract_posteriors(bbal_brooding.brms, predictors, interactions.bbal, c("Bird Island", "Kerguelen"))
+bbal_brooding.posteriors %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+waal_brooding.posteriors <- extract_posteriors(waal_brooding.brms, predictors, interactions.waal, c("Bird Island", "Crozet"))
+waal_brooding.posteriors %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+
+# Weak
+bbal_brooding.posteriors_weak <- extract_posteriors(bbal_brooding.brms_weak, predictors, interactions.bbal, c("Bird Island", "Kerguelen"))
+bbal_brooding.posteriors_weak %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+waal_brooding.posteriors_weak <- extract_posteriors(waal_brooding.brms_weak, predictors, interactions.waal, c("Bird Island", "Crozet"))
+waal_brooding.posteriors_weak %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+
+# Non-directional
+bbal_brooding.posteriors_noDir <- extract_posteriors(bbal_brooding.brms_noDir, predictors, interactions.bbal, c("Bird Island", "Kerguelen"))
+bbal_brooding.posteriors_noDir %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+waal_brooding.posteriors_noDir <- extract_posteriors(waal_brooding.brms_noDir, predictors, interactions.waal, c("Bird Island", "Crozet"))
+waal_brooding.posteriors_noDir %<>%  mutate(variable = fct_rev(fct_relevel(variable, 
+                                        c("b_median_trip.days", 
+                                          "b_diff_trip_abs.days", 
+                                          "b_diff_var_abs.days"))))
+
+
+```
+
+Plot the posterior distributions from each model to compare sensitivty to prior specification.
+
+```{r plot_posteriors, echo = FALSE }
+
+# BBAL: Incubation ====
+
+# Reference
+bbal_incub.posteriors_plot_ref <- ggplot() +
+  stat_halfeye(data = subset(bbal_incub.posteriors, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(bbal_incub.posteriors, colony == "Kerguelen"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Reference priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+# Weak
+bbal_incub.posteriors_plot_weak <- ggplot() +
+  stat_halfeye(data = subset(bbal_incub.posteriors_weak, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(bbal_incub.posteriors_weak, colony == "Kerguelen"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Weaker priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+
+# Non-directional
+bbal_incub.posteriors_plot_noDir <- ggplot() +
+  stat_halfeye(data = subset(bbal_incub.posteriors_noDir, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(bbal_incub.posteriors_noDir, colony == "Kerguelen"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Non-directional priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+
+# BBAL: Brooding ====
+
+# Reference
+bbal_brooding.posteriors_plot_ref <- ggplot() +
+  stat_halfeye(data = subset(bbal_brooding.posteriors, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(bbal_brooding.posteriors, colony == "Kerguelen"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Reference priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+# Weak
+bbal_brooding.posteriors_plot_weak <- ggplot() +
+  stat_halfeye(data = subset(bbal_brooding.posteriors_weak, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(bbal_brooding.posteriors_weak, colony == "Kerguelen"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Weaker priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+
+# Non-directional
+bbal_brooding.posteriors_plot_noDir <- ggplot() +
+  stat_halfeye(data = subset(bbal_brooding.posteriors_noDir, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(bbal_brooding.posteriors_noDir, colony == "Kerguelen"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Non-directional priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+
+# WAAL: Incubation ====
+
+# Reference
+waal_incub.posteriors_plot_ref <- ggplot() +
+  stat_halfeye(data = subset(waal_incub.posteriors, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(waal_incub.posteriors, colony == "Crozet"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Reference priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+# Weak
+waal_incub.posteriors_plot_weak <- ggplot() +
+  stat_halfeye(data = subset(waal_incub.posteriors_weak, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(waal_incub.posteriors_weak, colony == "Crozet"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Weaker priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+
+# Non-directional
+waal_incub.posteriors_plot_noDir <- ggplot() +
+  stat_halfeye(data = subset(waal_incub.posteriors_noDir, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(waal_incub.posteriors_noDir, colony == "Crozet"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Non-directional priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+
+# WAAL: Brooding ====
+
+# Reference
+waal_brooding.posteriors_plot_ref <- ggplot() +
+  stat_halfeye(data = subset(waal_brooding.posteriors, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(waal_brooding.posteriors, colony == "Crozet"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Reference priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+# Weak
+waal_brooding.posteriors_plot_weak <- ggplot() +
+  stat_halfeye(data = subset(waal_brooding.posteriors_weak, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(waal_brooding.posteriors_weak, colony == "Crozet"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Weaker priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+
+# Non-directional
+waal_brooding.posteriors_plot_noDir <- ggplot() +
+  stat_halfeye(data = subset(waal_brooding.posteriors_noDir, colony == "Bird Island"), 
+               side = "bottom", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "bi_low", 
+                                 ifelse(after_stat(x) > rope_upper, "bi_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  stat_halfeye(data = subset(waal_brooding.posteriors_noDir, colony == "Crozet"), 
+               side = "top", 
+               aes(x = value, y = variable,
+                   fill = ifelse(after_stat(x) < rope_lower, "ker_low", 
+                                 ifelse(after_stat(x) > rope_upper, "ker_high", "grey80"))),
+               height = 0.7,
+               show.legend = FALSE) +
+  scale_fill_manual(values = c(
+    "bi_low" = bi_col.low, "bi_high" = bi_col.high,
+    "ker_low" = ker_col.low, "ker_high" = ker_col.high ) ) +
+  scale_y_discrete(labels = my_labels) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 1, col = "grey20") +
+  geom_rect(aes(xmin = rope_lower, xmax = rope_upper, ymin = -Inf, ymax = Inf),
+              fill = "lightcyan4", alpha = 0.25) +
+  labs(y = "", 
+       x = expression(logit(italic(p))),
+       title = "Non-directional priors") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+
+
+
+
+# hypothesis(bbal_incub.brms, "median_trip.days < 0")
+# hypothesis(bbal_incub_weak, "median_trip.days < 0")
+# hypothesis(bbal_incub_sceptical, "median_trip.days < 0")
+
+```
+
+```{r bbal_incub, caption = "Black-browed albatrosses, incubation. Comparison of posterior samples for models using reference, weaker, and non-directional priors. }
+
+ggarrange(bbal_incub.posteriors_plot_ref +
+            labs(tag = "(A)") +
+            theme(plot.tag.position = (c(0.01, 1))),
+          bbal_incub.posteriors_plot_weak +
+            theme(axis.title.y = element_text(margin = margin(r = 20)),
+                  axis.text.y = element_blank()),
+          bbal_incub.posteriors_plot_noDir + 
+            theme(axis.title.y = element_text(margin = margin(r = 20)),
+                  axis.text.y = element_blank()),
+          ncol = 3,
+          nrow = 1,
+          widths = c(1, 0.95, 0.95))
+
+```
+
+```{r bbal_brooding, caption = "Black-browed albatrosses, brooding. Comparison of posterior samples for models using reference, weaker, and non-directional priors. }
+
+ggarrange(bbal_brooding.posteriors_plot_ref +
+            labs(tag = "(B)") +
+            theme(plot.tag.position = (c(0.01, 1))),
+          bbal_brooding.posteriors_plot_weak +
+            theme(axis.title.y = element_text(margin = margin(r = 20)),
+                  axis.text.y = element_blank()),
+          bbal_brooding.posteriors_plot_noDir + 
+            theme(axis.title.y = element_text(margin = margin(r = 20)),
+                  axis.text.y = element_blank()),
+          ncol = 3,
+          nrow = 1,
+          widths = c(1, 0.95, 0.95))
+
+```
+
+
+```{r waal_incub, caption = "Wandering albatrosses, incubation. Comparison of posterior samples for models using reference, weaker, and non-directional priors. }
+
+ggarrange(waal_incub.posteriors_plot_ref +
+            labs(tag = "(C)") +
+            theme(plot.tag.position = (c(0.01, 1))),
+          waal_incub.posteriors_plot_weak +
+            theme(axis.title.y = element_text(margin = margin(r = 20)),
+                  axis.text.y = element_blank()),
+          waal_incub.posteriors_plot_noDir + 
+            theme(axis.title.y = element_text(margin = margin(r = 20)),
+                  axis.text.y = element_blank()),
+          ncol = 3,
+          nrow = 1,
+          widths = c(1, 0.95, 0.95))
+
+```
+
+```{r waal_brooding, caption = "Wandering albatrosses, brooding. Comparison of posterior samples for models using reference, weaker, and non-directional priors. }
+
+ggarrange(waal_brooding.posteriors_plot_ref +
+            labs(tag = "(D)") +
+            theme(plot.tag.position = (c(0.01, 1))),
+          waal_brooding.posteriors_plot_weak +
+            theme(axis.title.y = element_text(margin = margin(r = 20)),
+                  axis.text.y = element_blank()),
+          waal_brooding.posteriors_plot_noDir + 
+            theme(axis.title.y = element_text(margin = margin(r = 20)),
+                  axis.text.y = element_blank()),
+          ncol = 3,
+          nrow = 1,
+          widths = c(1, 0.95, 0.95))
+
+```
+
+## Figure S3
+
+```{r Figure_S3, caption = "Figure S4. Comparison of posterior estimates across different prior specifications: the reference priors used in the main analysis, weaker priors with the same directionality but greater variance, and non-directional priors with the same variance but centred on zero. Results are shown for black-browed albatrosses during (A) incubation and (B) brooding, and wandering albatrosses during (C) incubation and (D) brooding. Panels show posterior distributions (coloured ridges) and 95% credible intervals (black dot and horizontal lines) from Bayesian models examining the effects of pair-level foraging behaviours, each measured in days, (T = pair-level median trip duration; D = within-pair difference in trip duration; V = within-pair difference in trip variability) on breeding success (p). Ridges are coloured by colony (blue for Kerguelen and Crozet, orange for Bird Island). The grey vertical bar in each panel bar indicates the Region of Practical Equivalence (ROPE); effects within this region are considered negligible. The greater the proportion of the ridge extending beyond the ROPE, the stronger the evidence for a true effect. Distributions on the right of the ROPE indicate a positive effect on breeding success, and on the left indicate a negative effect."}
+
+png(file = "Figures/FIGURE_S3.png", width = 25, height = 35, units = "in", res = 600)
+ggarrange(bbal_incub.posteriors_plot_ref +
+            labs(tag = "(A)") +
+            theme(plot.tag.position = (c(0.01, 1))),
+          bbal_incub.posteriors_plot_weak +
+            theme(axis.title.y = element_blank(),
+                  axis.text.y = element_blank()),
+          bbal_incub.posteriors_plot_noDir + 
+            theme(axis.title.y = element_blank(),
+                  axis.text.y = element_blank()),
+          
+          bbal_brooding.posteriors_plot_ref +
+            labs(tag = "(B)") +
+            theme(plot.tag.position = (c(0.01, 1))),
+          bbal_brooding.posteriors_plot_weak +
+            theme(axis.title.y = element_blank(),
+                  axis.text.y = element_blank()),
+          bbal_brooding.posteriors_plot_noDir + 
+            theme(axis.title.y = element_blank(),
+                  axis.text.y = element_blank()),
+          
+          waal_incub.posteriors_plot_ref +
+            labs(tag = "(C)") +
+            theme(plot.tag.position = (c(0.01, 1))),
+          waal_incub.posteriors_plot_weak +
+            theme(axis.title.y = element_blank(),
+                  axis.text.y = element_blank()),
+          waal_incub.posteriors_plot_noDir + 
+            theme(axis.title.y = element_blank(),
+                  axis.text.y = element_blank()),
+          
+          waal_brooding.posteriors_plot_ref +
+            labs(tag = "(D)") +
+            theme(plot.tag.position = (c(0.01, 1))),
+          waal_brooding.posteriors_plot_weak +
+            theme(axis.title.y = element_blank(),
+                  axis.text.y = element_blank()),
+          waal_brooding.posteriors_plot_noDir + 
+            theme(axis.title.y = element_blank(),
+                  axis.text.y = element_blank()),
+          ncol = 3,
+          nrow = 4,
+          widths = c(1, 0.95, 0.95))
+dev.off()
+
+
+```

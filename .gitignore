@@ -5,8 +5,7 @@
 Figures
 Data_outputs
 Data_inputs/Data_OG
-failureRates_results_MKD.html
-failureRates_SI_MKD.html
+*.html
 failureRates_SI_MKD.Rmd
 failureRates_code_graveyard.R
 failureRates_additional_analyses.R
@@ -14,7 +13,13 @@ Data_inputs/all_pair_behaviour_brooding_withSex.RData
 Data_inputs/all_pair_behaviour_incub_withSex.RData
 Data_inputs/all_pair_behaviour_brooding.RData
 Data_inputs/all_pair_behaviour_incub.RData
+Data_inputs/bbal_ker_weekly_sst.csv
+Data_inputs/bbal_bi_weekly_sst.csv
+Data_inputs/waal_birdis_gps*
+Data_inputs/waal_crozet_gps*
+Data_inputs/bba_kerguelen_gps*
+Data_inputs/bba_birdis_gps*
 failureRates_main_analysis.R
-failureRates_analyses.html
 failureRates_anonymise_rings.R
 rings_lookup.RData
+/Workshop
