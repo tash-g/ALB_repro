@@ -1,5 +1,5 @@
 ---
-title: "Comparison of site variability for: *Parental coordination and environment interact to drive breeding success in albatrosses*"
+title: "Comparison of site variability for: *Contrasting associations between parental coordination and breeding success in albatrosses across differing environmental contexts*"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
@@ -33,16 +33,21 @@ select <- dplyr::select
 
 ```
 
+Sea surface temperature (SST) data were obtained from the NOAA Optimum Interpolation Sea Surface Temperature Version 2 High Resolution Dataset, which provides a global blended analysis of SST at 0.25° spatial resolution from September 1981 onwards. Weekly SST fields were extracted for the spatial extent relevant to each population during the breeding season. The spatial domain for each colony was defined using the 80% utilisation distribution (UD) of GPS tracking data, representing the core foraging range of individuals from each population.
+
+Huang, B., C. Liu, V. Banzon, E. Freeman, G. Graham, B. Hankins, T. Smith, and H.-M. Zhang, 2021: Improvements of the Daily Optimum Interpolation Sea Surface Temperature (DOISST) Version 2.1, Journal of Climate, 34, 2923-2939. doi: 10.1175/JCLI-D-20-0166.1
+
+**Data are not provided in this repository** and should be downloaded from source using the information above.
+
 
 ```{r load_data_compute_variance}
 
 # Load  the environmental data ----
+data_bi.bbal <- data.table::fread("Data_inputs/bbal_bi_weekly_sst.csv")
+data_ker <- data.table::fread("Data_inputs/bbal_ker_weekly_sst.csv")
 
-data_ker <- read.csv("Data_inputs/bbal_ker_weekly_sst.csv")
-#range(year(data_ker$date)) # 1981-2025
-
-data_bi <- read.csv('Data_inputs/bbal_bi_weekly_sst.csv')
-#range(year(data_bi$date)) # 1981-2025
+data_bi.waal <- data.table::fread("Data_inputs/waal_bi_weekly_sst.csv")
+data_cro <- data.table::fread("Data_inputs/waal_cro_weekly_sst.csv")
 
 
 # Compute variation ---- 
@@ -50,22 +55,29 @@ data_bi <- read.csv('Data_inputs/bbal_bi_weekly_sst.csv')
 # For each spatial cell, compute mean, SD and CV of SST through time
 
 ## Create spatial cell ID
-data_bi %<>% 
+data_bi.bbal %<>% 
   mutate(cell = paste(x, y))
 
 data_ker %<>% 
   mutate(cell = paste(x, y))
 
+data_bi.waal %<>% 
+  mutate(cell = paste(x, y))
+
+data_cro %<>% 
+  mutate(cell = paste(x, y))
+
 
 ## Compute variability
-cell_var_bi <- data_bi %>%
+cell_var_bi.bbal <- data_bi.bbal %>%
   group_by(cell) %>%
   summarise(
     mean_sst = mean(sst, na.rm = TRUE), # mean SST at each cell through time
     sd_sst   = sd(sst, na.rm = TRUE), # SD SST at each cell through time 
     cv_sst   = ifelse(abs(mean_sst) < 1, NA, sd_sst / mean_sst), # variability relative to local mean
     n_obs    = n() ) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(colony = "birdisland")
 
 cell_var_ker <- data_ker %>%
   group_by(cell) %>%
@@ -74,18 +86,40 @@ cell_var_ker <- data_ker %>%
     sd_sst   = sd(sst, na.rm = TRUE),
     cv_sst   = ifelse(abs(mean_sst) < 1, NA, sd_sst / mean_sst), 
     n_obs    = n() ) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(colony = "kerguelen")
+
+cell_var_bi.waal <- data_bi.waal %>%
+  group_by(cell) %>%
+  summarise(
+    mean_sst = mean(sst, na.rm = TRUE),
+    sd_sst   = sd(sst, na.rm = TRUE),
+    cv_sst   = ifelse(abs(mean_sst) < 1, NA, sd_sst / mean_sst), 
+    n_obs    = n() ) %>%
+  ungroup() %>%
+  mutate(colony = "birdisland")
+
+cell_var_cro <- data_cro %>%
+  group_by(cell) %>%
+  summarise(
+    mean_sst = mean(sst, na.rm = TRUE),
+    sd_sst   = sd(sst, na.rm = TRUE),
+    cv_sst   = ifelse(abs(mean_sst) < 1, NA, sd_sst / mean_sst), 
+    n_obs    = n() ) %>%
+  ungroup() %>%
+  mutate(colony = "crozet")
+
 
 
 ## Summarise variability across space
-site_summary_bi <- cell_var_bi %>%
+site_summary_bi.bbal <- cell_var_bi.bbal %>%
   summarise(
     mean_sd_sst = mean(sd_sst, na.rm = TRUE), # temporal variability across cells
     sd_sd_sst   = sd(sd_sst, na.rm = TRUE), # spatial hetereogeneity in temporal SD (variation among locations in how variable they are through time)
     mean_cv_sst = mean(cv_sst, na.rm = TRUE), # relative temporal variability
     sd_cv_sst = sd(cv_sst, na.rm = TRUE),
     n_cells = n() ) %>%
-  mutate(colony = "Bird Island")
+  mutate(colony = "Bird Island - BBAL")
 
 site_summary_ker <- cell_var_ker %>%
   summarise(
@@ -96,12 +130,32 @@ site_summary_ker <- cell_var_ker %>%
     n_cells = n() ) %>%
   mutate(colony = "Kerguelen")
 
-site_summary <- rbind(site_summary_bi, site_summary_ker)
+site_summary_bi.waal <- cell_var_bi.waal %>%
+  summarise(
+    mean_sd_sst = mean(sd_sst, na.rm = TRUE),  
+    sd_sd_sst   = sd(sd_sst, na.rm = TRUE), 
+    mean_cv_sst = mean(cv_sst, na.rm = TRUE), 
+    sd_cv_sst = sd(cv_sst, na.rm = TRUE),
+    n_cells = n() ) %>%
+  mutate(colony = "Bird Island - WAAL")
 
-save(site_summary, file = "Data_outputs/sst_variability_comparison")
+site_summary_cro <- cell_var_cro %>%
+  summarise(
+    mean_sd_sst = mean(sd_sst, na.rm = TRUE),  
+    sd_sd_sst   = sd(sd_sst, na.rm = TRUE), 
+    mean_cv_sst = mean(cv_sst, na.rm = TRUE), 
+    sd_cv_sst = sd(cv_sst, na.rm = TRUE),
+    n_cells = n() ) %>%
+  mutate(colony = "Crozet")
+
+site_summary <- rbind(site_summary_bi.bbal, site_summary_ker, site_summary_bi.waal, site_summary_cro)
+
+save(site_summary, file = "Data_outputs/sst_variability_comparison.RData")
 
 
 ```
+
+### Table S3
 
 ```{r table_S3}
 
@@ -118,82 +172,160 @@ table_s3 %>%
 
 
 ```{r model_variability}
-# Model variability across sites ----
 
-cell_var_bi %<>% mutate(colony = "birdisland")
-cell_var_ker %<>% mutate(colony = "kerguelen")
+# BBAL
+cell_var_bbal <- rbind(cell_var_bi.waal, cell_var_ker)
+cell_var_bbal$colony <- factor(cell_var_bbal$colony, levels = c("kerguelen", "birdisland") )
 
-cell_var_all <- rbind(cell_var_bi, cell_var_ker)
+### Models
+lm_var.bbal <- lm(sd_sst ~ colony, data = cell_var_bbal)
+lm_var.bbal.summary <- summary(lm_var.bbal)$coefficients
+
+lm_cv.bbal <- lm(cv_sst ~ colony, data = cell_var_bbal)
+lm_cv.bbal.summary <- summary(lm_cv.bbal)$coefficients
 
 
-lm_var <- lm(sd_sst ~ colony, data = cell_var_all)
-lm_var.summary <- summary(lm_var)$coefficients
+# WAAL
+cell_var_waal <- rbind(cell_var_bi.waal, cell_var_cro)
+cell_var_waal$colony <- factor(cell_var_waal$colony, levels = c("crozet", "birdisland") )
 
-lm_cv <- lm(cv_sst ~ colony, data = cell_var_all)
-lm_cv.summary <- summary(lm_cv)$coefficients
+### Models
+lm_var.waal <- lm(sd_sst ~ colony, data = cell_var_waal)
+lm_var.waal.summary <- summary(lm_var.waal)$coefficients
+
+lm_cv.waal <- lm(cv_sst ~ colony, data = cell_var_waal)
+lm_cv.waal.summary <- summary(lm_cv.waal)$coefficients
 
 ```
 
 We used linear models to compare variability (SD SST) and coefficient of variation (CV SST) across cells at each colony.
 
-Analyses of per-cell SD and CV values showed that Bird Island was more variable in absolute SST over time (SD SST: t = `r lm_var.summary[2,3]`, df = `r summary(lm_var)$df[2]`, p = `r lm_var.summary[2, 4]`) and that this pattern held even when considering variability relative to local mean SST (CV SST: t = `r lm_cv.summary[2,3]`, df = `r summary(lm_cv)$df[2]`, p = `r lm_cv.summary[2, 4]`).
+Analyses of per-cell SD and CV values showed that when considering the range of black-browed albatrosses, Bird Island was more variable in absolute SST over time (SD SST: t = `r lm_var.bbal.summary[2,3]`, df = `r summary(lm_var.bbal)$df[2]`, p = `r lm_var.bbal.summary[2, 4]`) and that this pattern held even when considering variability relative to local mean SST (CV SST: t = `r lm_cv.bbal.summary[2,3]`, df = `r summary(lm_cv.bbal)$df[2]`, p = `r lm_cv.bbal.summary[2, 4]`).
+
+The same patterns were observed when comparing variability between Bird Island and Crozet for the wandering albatrosses, where again Bird Island was more variable in absolute SST over time (SD SST: t = `r lm_var.waal.summary[2,3]`, df = `r summary(lm_var.waal)$df[2]`, p = `r lm_var.waal.summary[2, 4]`) and that this pattern held even when considering variability relative to local mean SST (CV SST: t = `r lm_cv.waal.summary[2,3]`, df = `r summary(lm_cv.waal)$df[2]`, p = `r lm_cv.waal.summary[2, 4]`).
 
 # Plot variability at each colony
 
 ```{r plot_variability}
 
-## Split cells into coords
-cell_var_xy.bi <- cell_var_bi %>%
+# Split cells into coords
+cell_var_xy.bi.bbal <- cell_var_bi.bbal %>%
   separate(cell, into = c("x", "y"), sep = " ") %>%
   mutate(
     x = as.numeric(x),
-    y = as.numeric(y) )
+    y = as.numeric(y) ) %>%
+  mutate(x = ifelse(x > 180, x - 360, x)) # convert back to 180 - -180 longitude
 
 cell_var_xy.ker <- cell_var_ker %>%
   separate(cell, into = c("x", "y"), sep = " ") %>%
   mutate(
     x = as.numeric(x),
-    y = as.numeric(y) )
+    y = as.numeric(y) ) %>%
+  mutate(x = ifelse(x > 180, x - 360, x))
 
 
-## Plot gridmap
-plot_grid_bi <- ggplot(cell_var_xy.bi, aes(x = x, y = y, fill = cv_sst)) +
+cell_var_xy.bi.waal <- cell_var_bi.waal %>%
+  separate(cell, into = c("x", "y"), sep = " ") %>%
+  mutate(
+    x = as.numeric(x),
+    y = as.numeric(y) ) %>%
+  mutate(x = ifelse(x > 180, x - 360, x)) 
+
+
+cell_var_xy.cro <- cell_var_cro %>%
+  separate(cell, into = c("x", "y"), sep = " ") %>%
+  mutate(
+    x = as.numeric(x),
+    y = as.numeric(y) ) %>%
+  mutate(x = ifelse(x > 180, x - 360, x)) 
+
+# Get colony locations
+birdisland <- data.frame(Lon = -38.073223, Lat = -54.007489)
+kerguelen <- data.frame(Lon = 69.376911, Lat = -49.666667)
+crozet <- data.frame(Lon = 51.706972, Lat = -46.358639)
+
+
+# Plot gridmap
+
+## Pair BBAL and WAAL plots so they have same scale range
+cv_range.bbal <- range(cell_var_xy.bi.bbal$cv_sst, cell_var_xy.ker$cv_sst, na.rm = TRUE)
+cv_range.waal <- range(cell_var_xy.bi.waal$cv_sst, cell_var_xy.cro$cv_sst, na.rm = TRUE)
+
+plot_grid_bi.bbal <- ggplot(cell_var_xy.bi.bbal, aes(x = x, y = y, fill = cv_sst)) +
   geom_tile() +
-  ylim(c(-60, -45)) + # cropping empty space
-  coord_equal() +
+  ylim(c(-60, -52)) +
+  coord_fixed(expand=FALSE) +
+  annotate("point", shape = 17, size = 5, col = "black", x = birdisland$Lon, y = birdisland$Lat) +
   scale_fill_viridis_c(
     name = "SST variability (CV)",
-    option = "C") +
+    option = "C",
+    limits = cv_range.bbal) +
   labs(x = "Longitude", y = "Latitude", tag = "(A)") +
   theme_bw() +
   theme(panel.grid = element_blank(),
         text = element_text(size = 16),
-        legend.position = "none")
+        legend.position = "none",
+        plot.margin = margin(0,0,0,0))
 
 plot_grid_ker <- ggplot(cell_var_xy.ker, aes(x = x, y = y, fill = cv_sst)) +
   geom_tile() +
-  coord_equal() +
+  coord_fixed(expand=FALSE) +
+  annotate("point", shape = 17, size = 5, col = "black", x = kerguelen$Lon, y = kerguelen$Lat) +
   scale_fill_viridis_c(
     name = "SST variability (CV)",
-    option = "C") +
+    option = "C",
+    limits = cv_range.bbal) +
   labs(x = "Longitude", y = "Latitude", tag = "(B)") +
   theme_bw() +
   theme(panel.grid = element_blank(),
         text = element_text(size = 16),
         plot.margin = margin(0, 0, 0, 0))
 
+
+plot_grid_bi.waal <- ggplot(cell_var_xy.bi.waal, aes(x = x, y = y, fill = cv_sst)) +
+  geom_tile() +
+  ylim(c(-60, -45)) +
+  coord_fixed(expand=FALSE) +
+  annotate("point", shape = 17, size = 5, col = "black", x = birdisland$Lon, y = birdisland$Lat) +
+  scale_fill_viridis_c(
+    name = "SST variability (CV)",
+    option = "C",
+    limits = cv_range.waal) +
+  labs(x = "Longitude", y = "Latitude", tag = "(C)") +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        text = element_text(size = 16),
+        legend.position = "none",
+        plot.margin = margin(0,0,0,0))
+
+plot_grid_cro <- ggplot(cell_var_xy.cro, aes(x = x, y = y, fill = cv_sst)) +
+  geom_tile() +
+  coord_fixed(expand=FALSE) +
+  annotate("point", shape = 17, size = 5, col = "black", x = crozet$Lon, y = crozet$Lat) +
+  scale_fill_viridis_c(
+    name = "SST variability (CV)",
+    option = "C",
+    limits = cv_range.waal) +
+  labs(x = "Longitude", y = "Latitude", tag = "(D)") +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        text = element_text(size = 16),
+        plot.margin = margin(0, 0, 0, 0))
+
+
+
 ```
 
 ## Figure S1
 
-```{r figure_S1, caption = "Figure S1. Spatial distribution of relative temporal sea-surface temperature variability within the core foraging ranges of (A) Bird Island and (B) Kerguelen. Colours represent the coefficient of variation (CV) of weekly SST within each 0.25° grid cell over the breeding season (1981–2025). Warmer colours indicate greater temporal variability relative to the local mean SST, while cooler colours indicate more stable thermal conditions."}
+```{r figure_S1, caption = "Figure S1. Spatial distribution of relative temporal sea-surface temperature variability within the core foraging ranges of black-browed albatrosses at (A) Bird Island and (B) Kerguelen, and wandering albatrosses at (C) Bird Island and (D) Crozet. Colours represent the coefficient of variation (CV) of weekly SST within each 0.25° grid cell over the breeding season (1981–2025). Warmer colours indicate greater temporal variability relative to the local mean SST, while cooler colours indicate more stable thermal conditions."}
 
-#png(file = "Figures/FIGURE_S1.png", width = 12, height = 4, units = "in", res = 600)
-ggarrange(plot_grid_bi, plot_grid_ker,
-          nrow = 1, 
+png(file = "Figures/FIGURE_S1.png", width = 12, height = 12, units = "in", res = 600)
+ggarrange(plot_grid_bi.bbal, plot_grid_ker,
+          plot_grid_bi.waal, plot_grid_cro, 
+          nrow = 2,
           ncol = 2,
-          align = "hv",
-          widths = c(1,1))
-#dev.off()
+          align = "hv")
+dev.off()
 
 ```

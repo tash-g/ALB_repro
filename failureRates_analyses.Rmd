@@ -1,5 +1,5 @@
 ---
-title: "Analyses for: *Parental coordination and environment interact to drive breeding success in albatrosses*"
+title: "Analyses for: *Contrasting associations between parental coordination and breeding success in albatrosses across differing environmental contexts*"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
@@ -23,7 +23,7 @@ source("failureRates_functions.R")
 
 # Define the packages
 packages <- c("bayestestR","brms", "cowplot","dplyr", "extrafont", "GGally", "ggplot2","ggpubr", "kableExtra", "magrittr", "performance", "tidybayes", "tidyverse", "lme4", "lmerTest", "emmeans", "rnaturalearth", 
-"raster", "rnaturalearthdata", "ggpubr", "sp", "adehabitatHR")
+"raster", "rnaturalearthdata", "ggpubr", "sp", "adehabitatHR", "DHARMa", "magick")
 
 # Install packages not yet installed - change lib to library path
 # installed_packages <- packages %in% rownames(installed.packages())
@@ -70,13 +70,10 @@ cro_col <- "#0F9ED5"
 my_labels <- c(
   expression(italic("V")),
   expression(italic("D")),
-  expression(italic("T"))#,
-  #expression(italic("F"))
-)
+  expression(italic("T")) )
 
 # Set up variable labeller
 variable_labels <- c(
-  #"debt.days:colony" =  expression("Fasting debt,"~italic("F")),
   "median_trip.days:colony" = expression("Pair-level median trip duration,"~italic("T")),
   "diff_trip_abs.days:colony" = expression("Within-pair difference in trip duration,"~italic("D")),
   "diff_var_abs.days:colony" = expression("Within-pair difference in trip variability,"~italic("V"))
@@ -316,7 +313,6 @@ failure_summary %>%
   row_spec(3, extra_css = "border-top: 1px solid black;") %>%
   kable_classic() 
 
-
 ```
 
 # Sex differences
@@ -351,7 +347,6 @@ waal_sex.diffs_means <- waal_sex.diffs_emmeans %>%
                           mutate(mean = paste0( signif(emmean, 3), 
                                                 " [", signif(asymp.LCL, 3), ", ", signif(asymp.UCL, 3), "]")) %>%
                           select(sex, phase, mean)
-
 
 ```
 
@@ -623,7 +618,6 @@ bbal_incub.posteriors_plot <- ggplot() +
       name = NULL,
       values = c("Bird Island" = bi_col.high, "Kerguelen" = ker_col.high),
       guide = guide_legend(override.aes = list(size = 5)) ) +
-  #
   theme_bw() +
   theme(text = element_text(size = 16),
         legend.position = c(0.82, 0.35),
@@ -655,7 +649,7 @@ ker_diff_trip <- process_interaction_estimates("b_diff_trip_abs.days", bbal_incu
 ker_diff_var <- process_interaction_estimates("b_diff_var_abs.days", bbal_incub.fixef, bbal_incub.posterior_samples, "b_colonykerguelen:diff_var_abs.days")
 
 # Combine the results with the original fixef data
-ker_fixef <- rbind(ker_median_trip, ker_diff_trip, ker_diff_var) # ker_debt, 
+ker_fixef <- rbind(ker_median_trip, ker_diff_trip, ker_diff_var) 
 colnames(ker_fixef) <- colnames(bbal_incub.fixef)
 ker_fixef <- round(ker_fixef, 2)
 
@@ -694,8 +688,7 @@ for (i in 1:length(predictors)) {
 ## Relevel factors
 bbal_brooding.posteriors %<>%
   mutate(variable = fct_rev(fct_relevel(variable,
-                                        c(#"b_debt.days",
-                                          "b_median_trip.days",
+                                        c("b_median_trip.days",
                                           "b_diff_trip_abs.days",
                                           "b_diff_var_abs.days"))))
 
@@ -748,13 +741,12 @@ bbal_brooding.fixef <- cbind(bbal_brooding.fixef, exp_coef)
 bbal_brooding.fixef$prop_rope <- round(prop_rope, digits = 2)
 
 ## Process each variable
-# ker_debt <- process_interaction_estimates("b_debt.days", bbal_brooding.fixef, bbal_brooding.posterior_samples, "b_debt.days:colonykerguelen")
 ker_median_trip <- process_interaction_estimates("b_median_trip.days", bbal_brooding.fixef, bbal_brooding.posterior_samples, "b_median_trip.days:colonykerguelen")
 ker_diff_trip <- process_interaction_estimates("b_diff_trip_abs.days", bbal_brooding.fixef, bbal_brooding.posterior_samples, "b_colonykerguelen:diff_trip_abs.days")
 ker_diff_var <- process_interaction_estimates("b_diff_var_abs.days", bbal_brooding.fixef, bbal_brooding.posterior_samples, "b_colonykerguelen:diff_var_abs.days")
 
 # Combine the results with the original fixef data
-ker_fixef <- rbind(ker_median_trip, ker_diff_trip, ker_diff_var) # ker_debt, 
+ker_fixef <- rbind(ker_median_trip, ker_diff_trip, ker_diff_var) 
 colnames(ker_fixef) <- colnames(bbal_brooding.fixef)
 ker_fixef <- round(ker_fixef, 2)
 
@@ -768,10 +760,8 @@ waal_incub.posterior_samples <- as_draws_df(waal_incub.brms)
 
 # Extract posterior samples by colony
 predictors <- colnames(waal_incub.posterior_samples)[2:5]
-# predictors <- colnames(waal_incub.posterior_samples)[2:6]
 predictors <- predictors[-2]
 interaction_terms <- colnames(waal_incub.posterior_samples)[6:8]
-#interaction_terms <- colnames(waal_incub.posterior_samples)[7:10]
 waal_incub.posteriors <- data.frame()
 
 for (i in 1:length(predictors)) {
@@ -795,8 +785,7 @@ for (i in 1:length(predictors)) {
 ## Relevel factors
 waal_incub.posteriors %<>%
   mutate(variable = fct_rev(fct_relevel(variable, 
-                                        c(#"b_debt.days", 
-                                          "b_median_trip.days", 
+                                        c("b_median_trip.days", 
                                           "b_diff_trip_abs.days", 
                                           "b_diff_var_abs.days"))))
 
@@ -834,7 +823,6 @@ waal_incub.posteriors_plot <-
       name = NULL,
       values = c("Bird Island" = bi_col.high, "Crozet" = ker_col.high),
       guide = guide_legend(override.aes = list(size = 5)) ) +
-  #
   theme_bw() +
   theme(text = element_text(size = 16),
         legend.position = c(0.85, 0.4),
@@ -861,13 +849,12 @@ waal_incub.fixef <- cbind(waal_incub.fixef, exp_coef)
 waal_incub.fixef$prop_rope <- round(prop_rope, digits = 2)
 
 ### Process each variable
-# cro_debt <- process_interaction_estimates("b_debt.days", waal_incub.fixef, waal_incub.posterior_samples, "b_debt.days:colonycrozet")
 cro_median_trip <- process_interaction_estimates("b_median_trip.days", waal_incub.fixef, waal_incub.posterior_samples, "b_median_trip.days:colonycrozet")
 cro_diff_trip <- process_interaction_estimates("b_diff_trip_abs.days", waal_incub.fixef, waal_incub.posterior_samples, "b_colonycrozet:diff_trip_abs.days")
 cro_diff_var <- process_interaction_estimates("b_diff_var_abs.days", waal_incub.fixef, waal_incub.posterior_samples, "b_colonycrozet:diff_var_abs.days")
 
 # Combine the results with the original fixef data
-cro_fixef <- rbind(cro_median_trip, cro_diff_trip, cro_diff_var) # cro_debt,
+cro_fixef <- rbind(cro_median_trip, cro_diff_trip, cro_diff_var) 
 colnames(cro_fixef) <- colnames(waal_incub.fixef)
 cro_fixef <- round(cro_fixef, 2)
 
@@ -906,8 +893,7 @@ for (i in 1:length(predictors)) {
 ## Relevel factors
 waal_brooding.posteriors %<>%
   mutate(variable = fct_rev(fct_relevel(variable, 
-                                        c(#"b_debt.days", 
-                                          "b_median_trip.days", 
+                                        c("b_median_trip.days", 
                                           "b_diff_trip_abs.days", 
                                           "b_diff_var_abs.days"))))
 
@@ -1065,8 +1051,7 @@ new_names <- c(
   "within-pair difference in trip variability",
   "Pair-level median trip duration : Colony",
   "Within-pair difference in trip duration : Colony",
-  "Within-pair difference in trip variability : Colony"
-)
+  "Within-pair difference in trip variability : Colony" )
 
 rownames(table1) <- new_names
 
@@ -1132,7 +1117,7 @@ new_order <- c("Intercept",
                "diff_var_abs.days", 
                "median_trip.days:colonycrozet", 
                "colonycrozet:diff_trip_abs.days", 
-               "colonycrozet:diff_var_abs.days")
+               "colonycrozet:diff_var_abs.days" )
 
 table2 <- table2[new_order, ]
 
@@ -1145,8 +1130,7 @@ new_names <- c(
   "Within-pair difference in trip variability",
   "Pair-level median trip duration : Colony",
   "Within-pair difference in trip duration : Colony",
-  "Within-pair difference in trip variability : Colony"
-)
+  "Within-pair difference in trip variability : Colony" )
 
 rownames(table2) <- new_names
 
@@ -1528,59 +1512,46 @@ For wandering albatrosses, we found negligible evidence that the various pair-le
 
 During brooding at Crozet, we found strong evidence that differences in trip duration within the pair ($D$) reduced breeding success by approximately `r waal_brooding_cro.D_probChg` `r waal_brooding_cro.D_probCIChg` percentage points (interaction estimate = `r waal_brooding_cro.D_coef` `r waal_brooding_cro.D_CI`, proportion inside ROPE = `r waal_brooding_cro.D_ROPE`; Table 2; Figure 3). We found weak evidence for positive effects of median trip duration, $T$, (interaction estimate = `r waal_brooding_cro.T_coef` `r waal_brooding_cro.T_CI`, proportion inside ROPE = `r waal_brooding_cro.T_ROPE`) and within-pair differences in variability, $V$, (interaction estimate = `r waal_brooding_cro.V_coef` `r waal_brooding_cro.V_CI`, proportion inside ROPE = `r waal_brooding_cro.V_ROPE`) on breeding success
 
-```{r behavioural_correlations, eval = FALSE}
 
-# BBA #
-# Incubation
-behav_cor_bbal.incub <- ggpairs(
-  data = bbal_incub.behaviour %>% ungroup() %>%
-    select(colony, median_trip_F.days, median_trip_M.days, diff_trip_FM.days, diff_var_FM.days),
-  columns = 2:5,
-  mapping = ggplot2::aes(colour = colony),
-  title = "Behavioural correlations by colony") +
-  scale_colour_manual(values = c(bi_col, ker_col)) +
-  scale_fill_manual(values = c(bi_col, ker_col))
+# Residual checks
+
+### Figure S5
+
+```{r residual_checks, caption = "Model diagnostics for the four primary Bayesian Generalized Linear Mixed Models (GLMMS) evaluating albatross breeding success. Models are presented as rows: (A) BBAL Incubation, (B) BBAL Brooding, (C) WAAL Incubation, and (D) WAAL Brooding.}
+
+# BBAL
+save_dharma_diag(bbal_incub.brms, "breeding_outcome.bin", 
+                 bbal_incub.brms$data$median_trip.days, 
+                 "Data_outputs/diag_bbal_incub.png", "BBAL: Incubation")
+
+save_dharma_diag(bbal_brooding.brms, "breeding_outcome.bin", 
+                 bbal_brooding.brms$data$median_trip.days, 
+                 "Data_outputs/diag_bbal_brooding.png", "BBAL: Brooding")
 
 
-behav_cor_bbal.incub <- ggpairs(
-  data = bbal_incub.behaviour %>%
-    select(colony, debt.days, median_trip.days, diff_trip.days, diff_var.days),
-  columns = 2:5,
-  mapping = ggplot2::aes(colour = colony),
-  title = "Behavioural correlations by colony") +
-  scale_colour_manual(values = c(bi_col, ker_col)) +
-  scale_fill_manual(values = c(bi_col, ker_col))
+# WAAL
+save_dharma_diag(waal_incub.brms, "breeding_outcome.bin", 
+                 waal_incub.brms$data$median_trip.days, 
+                 "Data_outputs/diag_waal_incub.png", "WAAL: Incubation")
 
-# Brooding
-behav_cor_bbal.brooding <- ggpairs(
-  data = bbal_brooding.behaviour %>%
-    select(colony, debt.days, median_trip.days, diff_trip.days, diff_var.days),
-  columns = 2:5,
-  mapping = ggplot2::aes(colour = colony),
-  title = "Behavioural correlations by colony") +
-  scale_colour_manual(values = c(bi_col, ker_col)) +
-  scale_fill_manual(values = c(bi_col, ker_col))
+save_dharma_diag(waal_brooding.brms, "breeding_outcome.bin", 
+                 waal_brooding.brms$data$median_trip.days, 
+                 "Data_outputs/diag_waal_brooding.png", "WAAL: Brooding")
 
-# WAAL #
-# Incubation
-behav_cor_waal_incub <- ggpairs(
-  data = waal_incub.behaviour %>%
-    select(colony, debt.days, median_trip.days, diff_trip.days, diff_var.days),
-  columns = 2:5,
-  mapping = ggplot2::aes(colour = colony),
-  title = "Behavioural correlations by colony") +
-  scale_colour_manual(values = c(bi_col, ker_col)) +
-  scale_fill_manual(values = c(bi_col, ker_col))
 
-# Brooding
-behav_cor_waal.brooding <- ggpairs(
-  data = waal_brooding.behaviour %>%
-    select(colony, debt.days, median_trip.days, diff_trip.days, diff_var.days),
-  columns = 2:5,
-  mapping = ggplot2::aes(colour = colony),
-  title = "Behavioural correlations by colony") +
-  scale_colour_manual(values = c(bi_col, ker_col)) +
-  scale_fill_manual(values = c(bi_col, ker_col))
+# Combine the panels 
+row1 <- image_read("Data_outputs/diag_bbal_incub.png")
+row2 <- image_read("Data_outputs/diag_bbal_brooding.png")
+row3 <- image_read("Data_outputs/diag_waal_incub.png")
+row4 <- image_read("Data_outputs/diag_waal_brooding.png")
 
+rows <- c(row1, row2, row3, row4)
+
+## Stack them vertically
+full_diagnostic_stack <- image_append(rows, stack = TRUE)
+full_diagnostic_stack
+
+## Save the result
+image_write(full_diagnostic_stack, path = "Figures/FIGURE_S5.png", format = "png")
 
 ```

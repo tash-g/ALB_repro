@@ -1,11 +1,35 @@
 
 # DATA FUNCTIONS ----------------------------------------------------------
 
-
 loadRData <- function(fileName){
   #loads an RData file, and returns it
   load(fileName)
   get(ls()[ls() != "fileName"])
+}
+
+
+save_dharma_diag <- function(model, response_var, covariate_vec, filename, title) {
+  # save residual outputs
+  
+  preds <- posterior_predict(model)
+  
+  sim_res <- createDHARMa(
+    simulatedResponse = t(preds), 
+    observedResponse = model$data[[response_var]], 
+    fittedPredictedResponse = apply(preds, 2, median),
+    integerResponse = TRUE)
+  
+  png(filename, width = 1500, height = 500, res = 150)
+  par(mfrow = c(1, 3), oma = c(0, 0, 2, 0), mar = c(5, 5, 4, 2)) 
+  
+  plotQQunif(sim_res)
+  plotResiduals(sim_res, main = "Residuals vs. Predicted")
+  plotResiduals(sim_res, covariate_vec, 
+                quantreg = TRUE, 
+                xlab = "Trip Duration")
+  mtext(title, outer = TRUE, cex = 1.2, font = 2)
+  
+  dev.off() 
 }
 
 
@@ -130,9 +154,4 @@ process_interaction_estimates <- function(var_name, fixef_data, posterior_sample
   
   return(result)
 }
-
-
-
-# prop_rope.func <- function (variable) {  
-#   mean(variable > rope_lower & variable < rope_upper) }
 

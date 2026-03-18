@@ -1,5 +1,5 @@
 ---
-title: "Analyses of model sensitivity to prior specification for: *Parental coordination and environment interact to drive breeding success in albatrosses*"
+title: "Analyses of model sensitivity to prior specification for: *Contrasting associations between parental coordination and breeding success in albatrosses across differing environmental contexts*"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
@@ -694,12 +694,6 @@ waal_brooding.posteriors_plot_noDir <- ggplot() +
   theme_bw() +
   theme(text = element_text(size = 16))
 
-
-
-
-# hypothesis(bbal_incub.brms, "median_trip.days < 0")
-# hypothesis(bbal_incub_weak, "median_trip.days < 0")
-# hypothesis(bbal_incub_sceptical, "median_trip.days < 0")
 
 ```
 
