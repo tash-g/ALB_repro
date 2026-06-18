@@ -6,7 +6,6 @@ Figures
 Data_outputs
 Data_inputs/Data_OG
 Data_inputs/Data_workshop
-*sst.csv
 *.html
 failureRates_SI_MKD.Rmd
 failureRates_code_graveyard.R

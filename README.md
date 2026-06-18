@@ -29,6 +29,7 @@ These data are used in the above scripts. Note that all rings/bird identities ha
 ### Behaviour/
 
 -   `{species}_{colony}_breeding_trips.RData:` These are the main datasets for analysis; there are four files, one for each population. Each row corresponds to a single foraging trip by the focal bird. The columns are as follows:
+
     -   *ring*: Factor encoding the unique ID of the focal bird;
     -   *season*: Breeding season during which the foraging trip was recorded. Because albatrosses breed over the austral summer (spanning two calendar years), 'season' refers to the year in which chicks are expected to hatch;
     -   *partner*: Factor encoding the unique ID of the partner bird;
@@ -49,7 +50,9 @@ These data are used in the above scripts. Note that all rings/bird identities ha
     -   *hatch_code*: Factor encoding whether hatch date was measured (MEAS) or estimated (EST);
     -   *phase*: Phase of breeding attempt during which trip fell. One of brooding or incubation;
     -   *days_since_lay*: Numeric variable representing the number of days since the egg was laid. During incubation, negative values may occur if the male began his foraging trip just before the egg was laid.
+
 -   `all_pair_behaviour_{incub/brooding}.RData` This is the output dataset from the data processing script. It forms the primary dataset used for analysis. Each row represents a pair's breeding attempt in a given season and summarises their incubation or brooding behaviour during that period. The columns are as follows:
+
     -   *pairID*: Unique identifier encoding the pair (i.e., combination of ring and partner, in descending alphanumeric order);
     -   *season*: Breeding season during which the foraging trip was recorded. Because albatrosses breed over the austral summer (spanning two calendar years) 'season' refers to the year in which chicks are expected to hatch;
     -   *breeding_outcome*: Factor encoding reproductive success for the pair in that year. One of: FAILED_EGG, FAILED_CHICK, FAILED (*unknown failure*), SUCCESSFUL;
@@ -61,11 +64,3 @@ These data are used in the above scripts. Note that all rings/bird identities ha
     -   *breeding_outcome.bin*: Binary variable encoding breeding success: 1 for successful, 0 for failed;
     -   *debt.days*: Measure of the overall disparity in investment between the pair members;
     -   *speCol*: Unique identity encoding each population. One of baBI (BBAL at Bird Island), baKer (BBAL at Kerguelen), waBI (WAAL at Bird Island), waCro (WAAL at Crozet).
-
-### Environment/
-
--   `{species}_{colony}_weekly_sst.csv:` Contains weekly sea surface temperature (SST) estimates estimates during the breeding season from within the core foraging range of each colony. Each row represents an individual spatial grid cell observation for a given date. The columns are as follows:
-    -   *x*: Longitude coordinate of the observation point, decimal degrees (°E);
-    -   y: Latitude coordinate of the observation point, decimal degrees (°N);
-    -   *date*: Date of the SST observation, DD/MM/YYYY;
-    -   *sst*: Sea surface temperature value, degrees celsius °C.
