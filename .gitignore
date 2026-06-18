@@ -18,6 +18,7 @@ Data_inputs/waal_birdis_gps*
 Data_inputs/waal_crozet_gps*
 Data_inputs/bba_kerguelen_gps*
 Data_inputs/bba_birdis_gps*
+Data_inputs/Environment
 failureRates_main_analysis.R
 failureRates_anonymise_rings.R
 rings_lookup.RData
