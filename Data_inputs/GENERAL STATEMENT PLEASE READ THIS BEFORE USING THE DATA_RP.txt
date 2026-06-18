@@ -1,0 +1,19 @@
+The attached archived file contains data derived from the long term field projects monitoring individual black-browed albatrosses at Bird Island (South Georgia), Canyon des Sourcils Noirs (Kerguelen archipelago), and Possession Island (Crozet Islands archipelago).
+
+This is a request to please let us know if you use them.  Several people have spent the best part of their careers collecting the data.
+
+If you plan to analyse the data, there are a number of reasons why it would be very helpful if you could contact Richard Phillips (raphil@bas.ac.uk) for Bird Island data and Christophe Barbraud (christophe.barbraud@cebc.cnrs.fr) and Karine Delord (karine.delord@cebc.cnrs.fr) for Kerguelen/Crozet data before doing so:
+
+1) Occasionally we discover and correct errors in the data.
+
+2) The data are complex and workers who do not know the study system are likely to benefit from advice on interpretation.
+
+3) At any one time, quite a few people within the existing project collaboration are analysing data from this project. Someone else may already be conducting the analysis you have in mind and it is desirable to prevent duplication of effort.
+
+4) In order to maintain funding for the project and for further analyses, every few years we submit proposals to funding agencies. It is therefore very helpful for those running the project to know which data analyses are in progress elsewhere.
+
+If you are interested in analysing the detailed project data in any depth, you may find it helpful to have access to the full relational database rather than the files available here.  If so, we are always open to further collaboration.
+
+In addition, the long term field project at Kerguelen can be found here:  https://cat.indores.fr/geonetwork/srv/eng/catalog.search#/metadata/44e56d59-a904-4a7d-91c7-fee29aeb0114
+
+The individual bird identities have been recoded and should therefore not be linked with data archived from other papers which include albatross data from this study site.

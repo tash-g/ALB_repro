@@ -22,7 +22,7 @@ run_full_analysis <- FALSE
 source("failureRates_functions.R")
 
 # Define the packages
-packages <- c("bayestestR","brms", "cowplot","dplyr", "extrafont", "GGally", "ggplot2","ggpubr", "kableExtra", "magrittr", "performance", "tidybayes", "tidyverse", "lme4", "lmerTest", "emmeans", "rnaturalearth", 
+packages <- c("bayestestR","brms", "cowplot","dplyr", "GGally", "ggplot2","ggpubr", "kableExtra", "magrittr", "performance", "tidybayes", "tidyverse", "lme4", "lmerTest", "emmeans", "rnaturalearth", 
 "raster", "rnaturalearthdata", "ggpubr", "sp", "adehabitatHR", "DHARMa", "magick")
 
 # Install packages not yet installed - change lib to library path
@@ -56,13 +56,7 @@ rope_upper = 0.1
 ### Set colour parameters
 
 ker_col <-  "#156082" 
-ker_col.high <- "#155470"
-ker_col.low <- "#96d0eb"
-
 bi_col <- "#E97132" 
-bi_col.low <- "#f59b6c"
-bi_col.high <- "#E97132" 
- 
 cro_col <- "#0F9ED5"
 
 ### Set labels
@@ -118,6 +112,51 @@ crozet.df <- as.data.frame(crozet.sp)
 
 ```
 
+# Plot variability at colonies
+
+```{r process_var_plot_data}
+
+load("Data_outputs/sst_variability_comparison_data.RData")
+
+cell_var_all.colonies$colony <- factor(cell_var_all.colonies$colony,
+  levels = c(
+    "Bird Island - BBAL",
+    "Kerguelen",
+    "Bird Island - WAAL",
+    "Crozet"))
+
+colony_colours <- c(
+  "Bird Island - BBAL" = bi_col,
+  "Kerguelen"          = ker_col,
+  "Bird Island - WAAL" = bi_col,
+  "Crozet"             = cro_col)
+
+
+sd_sst.plot <- ggplot(cell_var_all.colonies, aes(x = colony, y = sd_sst, fill = colony)) +
+  geom_violin() +
+  labs(x = NULL, y = "SST standard deviation (°C)") +
+  scale_fill_manual(values = colony_colours) +
+  theme_bw() + 
+  theme(legend.position = "none",
+        plot.margin=unit(c(0.5,0.5,0.5,1), 'cm'))
+
+cv_sst.plot <- ggplot(cell_var_all.colonies, aes(x = colony, y = cv_sst, fill = colony)) +
+  geom_violin() +
+  labs(x = NULL, y = "SST coefficient of variation") +
+  scale_fill_manual(values = colony_colours) +
+  theme_bw() + 
+  theme(legend.position = "none",
+        plot.margin=unit(c(0.5,0.5,0.5,1), 'cm'),)
+
+
+right_panel <- ggarrange(
+  sd_sst.plot, cv_sst.plot,
+  ncol = 1, nrow = 2,
+  labels = c("(B)", "(C)"),
+  align = "hv")
+
+```
+
 #### Figure 1
 
 ```{r figure1, caption = "Figure 1. Map showing the location of the three study colonies, Bird Island, Crozet, and Kerguelen, in the sub-Antarctic. Map is displayed in a Southern Hemisphere stereographic projection centred on the South Pole."}
@@ -150,9 +189,13 @@ colony_map <-
         plot.subtitle = element_text(size = 14),
         legend.position = "none") 
 
-#png("Figures/FIGURE_1.png", width = 4.5, height = 4.5, units = "in", res = 600)
-colony_map
-#dev.off()
+png("Figures/FIGURE_1.png", width = 11, height = 6, units = "in", res = 600)
+ggarrange(
+  colony_map, right_panel,
+  ncol = 2, nrow = 1,
+  widths = c(1.2, 1),   
+  labels = c("(A)", ""))
+dev.off()
 
 
 ```

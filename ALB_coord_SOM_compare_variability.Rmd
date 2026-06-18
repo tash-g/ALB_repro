@@ -74,42 +74,44 @@ cell_var_bi.bbal <- data_bi.bbal %>%
   summarise(
     mean_sst = mean(sst, na.rm = TRUE), # mean SST at each cell through time
     sd_sst   = sd(sst, na.rm = TRUE), # SD SST at each cell through time 
-    cv_sst   = ifelse(abs(mean_sst) < 1, NA, sd_sst / mean_sst), # variability relative to local mean
+    cv_sst   = ifelse(mean_sst < 1, NA, sd_sst / mean_sst), # variability relative to local mean
     n_obs    = n() ) %>%
   ungroup() %>%
-  mutate(colony = "birdisland")
+  mutate(colony = "Bird Island - BBAL")
 
 cell_var_ker <- data_ker %>%
   group_by(cell) %>%
   summarise(
     mean_sst = mean(sst, na.rm = TRUE),
     sd_sst   = sd(sst, na.rm = TRUE),
-    cv_sst   = ifelse(abs(mean_sst) < 1, NA, sd_sst / mean_sst), 
+    cv_sst   = ifelse(mean_sst < 1, NA, sd_sst / mean_sst), 
     n_obs    = n() ) %>%
   ungroup() %>%
-  mutate(colony = "kerguelen")
+  mutate(colony = "Kerguelen")
 
 cell_var_bi.waal <- data_bi.waal %>%
   group_by(cell) %>%
   summarise(
     mean_sst = mean(sst, na.rm = TRUE),
     sd_sst   = sd(sst, na.rm = TRUE),
-    cv_sst   = ifelse(abs(mean_sst) < 1, NA, sd_sst / mean_sst), 
+    cv_sst   = ifelse(mean_sst < 1, NA, sd_sst / mean_sst), 
     n_obs    = n() ) %>%
   ungroup() %>%
-  mutate(colony = "birdisland")
+  mutate(colony = "Bird Island - WAAL")
 
 cell_var_cro <- data_cro %>%
   group_by(cell) %>%
   summarise(
     mean_sst = mean(sst, na.rm = TRUE),
     sd_sst   = sd(sst, na.rm = TRUE),
-    cv_sst   = ifelse(abs(mean_sst) < 1, NA, sd_sst / mean_sst), 
+    cv_sst   = ifelse(mean_sst < 1, NA, sd_sst / mean_sst), 
     n_obs    = n() ) %>%
   ungroup() %>%
-  mutate(colony = "crozet")
+  mutate(colony = "Crozet")
 
-
+### Save combined datasets
+cell_var_all.colonies <- rbind(cell_var_bi.bbal, cell_var_ker, cell_var_bi.waal, cell_var_cro)
+save(cell_var_all.colonies, file = "Data_outputs/sst_variability_comparison_data.RData")
 
 ## Summarise variability across space
 site_summary_bi.bbal <- cell_var_bi.bbal %>%
@@ -118,8 +120,7 @@ site_summary_bi.bbal <- cell_var_bi.bbal %>%
     sd_sd_sst   = sd(sd_sst, na.rm = TRUE), # spatial hetereogeneity in temporal SD (variation among locations in how variable they are through time)
     mean_cv_sst = mean(cv_sst, na.rm = TRUE), # relative temporal variability
     sd_cv_sst = sd(cv_sst, na.rm = TRUE),
-    n_cells = n() ) %>%
-  mutate(colony = "Bird Island - BBAL")
+    n_cells = n() ) 
 
 site_summary_ker <- cell_var_ker %>%
   summarise(
@@ -127,8 +128,7 @@ site_summary_ker <- cell_var_ker %>%
     sd_sd_sst   = sd(sd_sst, na.rm = TRUE), 
     mean_cv_sst = mean(cv_sst, na.rm = TRUE), 
     sd_cv_sst = sd(cv_sst, na.rm = TRUE),
-    n_cells = n() ) %>%
-  mutate(colony = "Kerguelen")
+    n_cells = n() )
 
 site_summary_bi.waal <- cell_var_bi.waal %>%
   summarise(
@@ -136,8 +136,7 @@ site_summary_bi.waal <- cell_var_bi.waal %>%
     sd_sd_sst   = sd(sd_sst, na.rm = TRUE), 
     mean_cv_sst = mean(cv_sst, na.rm = TRUE), 
     sd_cv_sst = sd(cv_sst, na.rm = TRUE),
-    n_cells = n() ) %>%
-  mutate(colony = "Bird Island - WAAL")
+    n_cells = n() )
 
 site_summary_cro <- cell_var_cro %>%
   summarise(
@@ -145,8 +144,7 @@ site_summary_cro <- cell_var_cro %>%
     sd_sd_sst   = sd(sd_sst, na.rm = TRUE), 
     mean_cv_sst = mean(cv_sst, na.rm = TRUE), 
     sd_cv_sst = sd(cv_sst, na.rm = TRUE),
-    n_cells = n() ) %>%
-  mutate(colony = "Crozet")
+    n_cells = n() ) 
 
 site_summary <- rbind(site_summary_bi.bbal, site_summary_ker, site_summary_bi.waal, site_summary_cro)
 
@@ -155,15 +153,15 @@ save(site_summary, file = "Data_outputs/sst_variability_comparison.RData")
 
 ```
 
-### Table S3
+### Table S2
 
-```{r table_S3}
+```{r table_S2}
 
-table_s3 <- site_summary %>% relocate(colony, .before = "mean_sd_sst")
+table_s2 <- site_summary %>% relocate(colony, .before = "mean_sd_sst")
 
-table_s3 %>%
+table_s2 %>%
   kable("html", row.names = FALSE, digits = 2,
-        caption = "Table S3. Mean and spatial standard deviation of per-cell temporal standard deviation (SD) and coefficient of variation (CV) of sea-surface temperature (SST) within each colony’s foraging range. SD of SST indicates variability over time; CV of SST indicates variability relative to mean SST over time. N cells indicates the number of cells used in the summary calculations.") %>%
+        caption = "Table S2. Mean and spatial standard deviation of per-cell temporal standard deviation (SD) and coefficient of variation (CV) of sea-surface temperature (SST) within each colony’s foraging range. SD of SST indicates variability over time; CV of SST indicates variability relative to mean SST over time. N cells indicates the number of cells used in the summary calculations.") %>%
   kable_classic() 
 
 ```

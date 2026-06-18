@@ -15,8 +15,6 @@ Data_inputs/all_pair_behaviour_brooding_withSex.RData
 Data_inputs/all_pair_behaviour_incub_withSex.RData
 Data_inputs/all_pair_behaviour_brooding.RData
 Data_inputs/all_pair_behaviour_incub.RData
-Data_inputs/bbal_ker_weekly_sst.csv
-Data_inputs/bbal_bi_weekly_sst.csv
 Data_inputs/waal_birdis_gps*
 Data_inputs/waal_crozet_gps*
 Data_inputs/bba_kerguelen_gps*
